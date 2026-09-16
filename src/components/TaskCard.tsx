@@ -45,11 +45,11 @@ function TaskCardComponent({
 
   return (
     <article
-      className={`task-card ${task.completed ? 'is-completed' : ''} ${
-        overdueTask ? 'is-overdue' : ''
-      } ${selectionMode ? 'is-selecting' : ''} ${
-        selected ? 'is-selected' : ''
-      }`}
+      className={`task-card priority-${task.priority} ${
+        task.completed ? 'is-completed' : ''
+      } ${overdueTask ? 'is-overdue' : ''} ${
+        selectionMode ? 'is-selecting' : ''
+      } ${selected ? 'is-selected' : ''}`}
       onClick={selectionMode ? () => onToggleSelection(task.id) : undefined}
     >
       {selectionMode ? (
@@ -89,7 +89,10 @@ function TaskCardComponent({
           </h3>
           <div className="task-badges">
             {task.recurrence !== 'none' && (
-              <span className="recurrence-badge" title={recurrenceShortLabels[task.recurrence]}>
+              <span
+                className="recurrence-badge"
+                title={recurrenceShortLabels[task.recurrence]}
+              >
                 <Repeat size={11} />
                 {recurrenceShortLabels[task.recurrence]}
               </span>

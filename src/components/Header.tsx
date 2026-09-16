@@ -1,5 +1,13 @@
 import { useRef } from 'react';
-import { CalendarDays, Check, Download, Keyboard, Moon, Sun, Upload } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  Download,
+  Keyboard,
+  Moon,
+  Sun,
+  Upload,
+} from 'lucide-react';
 import { useToday } from '../hooks/useToday';
 import type { Theme } from '../types';
 
@@ -12,7 +20,7 @@ interface HeaderProps {
 }
 
 const headerDateFormatter = new Intl.DateTimeFormat(undefined, {
-  weekday: 'short',
+  weekday: 'long',
   month: 'short',
   day: 'numeric',
 });
@@ -32,7 +40,7 @@ export function Header({
     <header className="topbar">
       <div className="brand">
         <div className="brand-mark" aria-hidden="true">
-          <Check size={21} strokeWidth={3} />
+          <Check size={22} strokeWidth={3} />
         </div>
         <div>
           <div className="brand-name">TaskFlow</div>
