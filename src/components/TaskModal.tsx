@@ -18,20 +18,24 @@ import {
   priorityOptions,
   recurrenceLabels,
   recurrenceOptions,
+  taskStatusLabels,
+  taskStatusOptions,
 } from '../constants';
-import type { Subtask, Task, TaskFormValues } from '../types';
+import type { Subtask, Task, TaskFormValues, TaskStatus } from '../types';
 import { toDateInputValue } from '../utils/date';
 import { createId } from '../utils/id';
+import { parseNaturalDate } from '../utils/naturalDate';
 import { getTagTone, normalizeTag } from '../utils/tags';
 
 interface TaskModalProps {
   open: boolean;
   task: Task | null;
+  defaultStatus?: TaskStatus;
   onClose: () => void;
   onSave: (values: TaskFormValues, taskId?: string) => void;
 }
 
-const createEmptyForm = (): TaskFormValues => ({
+const createEmptyForm = (status: TaskStatus = 'todo'): TaskFormValues => ({
   title: '',
   description: '',
   priority: 'medium',
@@ -40,10 +44,19 @@ const createEmptyForm = (): TaskFormValues => ({
   subtasks: [],
   recurrence: 'none',
   pinned: false,
+  status,
 });
 
-export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
-  const [formValues, setFormValues] = useState<TaskFormValues>(createEmptyForm);
+export function TaskModal({
+  open,
+  task,
+  defaultStatus = 'todo',
+  onClose,
+  onSave,
+}: TaskModalProps) {
+  const [formValues, setFormValues] = useState<TaskFormValues>(() =>
+    createEmptyForm(defaultStatus),
+  );
   const [formError, setFormError] = useState('');
   const [tagDraft, setTagDraft] = useState('');
   const [subtaskDraft, setSubtaskDraft] = useState('');
@@ -67,13 +80,14 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
             subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
             recurrence: task.recurrence,
             pinned: task.pinned,
+            status: task.status,
           }
-        : createEmptyForm(),
+        : createEmptyForm(defaultStatus),
     );
     setFormError('');
     setTagDraft('');
     setSubtaskDraft('');
-  }, [open, task]);
+  }, [open, task, defaultStatus]);
 
   useEffect(() => {
     if (!open) {
@@ -138,6 +152,21 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
     return null;
   }
 
+  const handleTitleChange = (value: string) => {
+    // If the field already has a due date we don't overwrite it, and we only
+    // parse when the phrase is detected — otherwise we leave the string alone.
+    const detection = parseNaturalDate(value);
+    if (detection && !formValues.dueDate) {
+      setFormValues((current) => ({
+        ...current,
+        title: detection.rest,
+        dueDate: detection.dueDate,
+      }));
+      return;
+    }
+    setFormValues((current) => ({ ...current, title: value }));
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = formValues.title.trim();
@@ -197,7 +226,11 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
     if (event.key === 'Enter' || event.key === ',') {
       event.preventDefault();
       addTag();
-    } else if (event.key === 'Backspace' && !tagDraft && formValues.tags.length > 0) {
+    } else if (
+      event.key === 'Backspace' &&
+      !tagDraft &&
+      formValues.tags.length > 0
+    ) {
       removeTag(formValues.tags[formValues.tags.length - 1]!);
     }
   };
@@ -290,11 +323,9 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               ref={titleInputRef}
               type="text"
               value={formValues.title}
-              onChange={(event) =>
-                setFormValues({ ...formValues, title: event.target.value })
-              }
+              onChange={(event) => handleTitleChange(event.target.value)}
               placeholder="e.g. Review the project brief"
-              maxLength={TASK_TITLE_MAX_LENGTH}
+              maxLength={TASK_TITLE_MAX_LENGTH + 40}
             />
           </label>
 
@@ -310,6 +341,25 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               maxLength={TASK_DESCRIPTION_MAX_LENGTH}
             />
           </label>
+
+          <div className="form-field">
+            <span>Status</span>
+            <div className="status-options">
+              {taskStatusOptions.map((status) => (
+                <button
+                  type="button"
+                  key={status}
+                  className={`status-option status-${status} ${
+                    formValues.status === status ? 'is-selected' : ''
+                  }`}
+                  onClick={() => setFormValues({ ...formValues, status })}
+                  aria-pressed={formValues.status === status}
+                >
+                  {taskStatusLabels[status]}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="form-field">
             <span>Tags</span>

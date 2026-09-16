@@ -3,8 +3,9 @@ export type StatusFilter = 'all' | 'active' | 'completed' | 'overdue' | 'archive
 export type SortOption = 'newest' | 'oldest' | 'dueDate' | 'priority';
 export type Theme = 'light' | 'dark';
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
-export type ViewMode = 'list' | 'calendar';
+export type ViewMode = 'list' | 'calendar' | 'board';
 export type FocusPhase = 'work' | 'break';
+export type TaskStatus = 'todo' | 'in-progress' | 'done';
 
 export interface Subtask {
   id: string;
@@ -22,10 +23,12 @@ export interface Task {
   archived: boolean;
   createdAt: number;
   updatedAt?: number;
+  completedAt?: number;
   tags: string[];
   subtasks: Subtask[];
   recurrence: Recurrence;
   pinned: boolean;
+  status: TaskStatus;
   focusSessions: number;
   focusMinutes: number;
 }
@@ -39,6 +42,7 @@ export interface TaskFormValues {
   subtasks: Subtask[];
   recurrence: Recurrence;
   pinned: boolean;
+  status: TaskStatus;
 }
 
 export interface TaskStats {

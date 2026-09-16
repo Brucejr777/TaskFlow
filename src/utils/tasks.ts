@@ -2,8 +2,9 @@ import type { Task } from '../types';
 import { createId } from './id';
 
 /**
- * Produce a fresh copy of a task: new id, reset completion, reset subtasks and
- * focus counters, and a title suffix so the two are easy to tell apart.
+ * Produce a fresh copy of a task: new id, reset completion, subtasks and
+ * focus counters, back to the "todo" column, and a title suffix so the two
+ * are easy to tell apart.
  */
 export const duplicateTask = (task: Task): Task => ({
   ...task,
@@ -11,6 +12,8 @@ export const duplicateTask = (task: Task): Task => ({
   title: `${task.title} (copy)`,
   completed: false,
   archived: false,
+  status: 'todo',
+  completedAt: undefined,
   createdAt: Date.now(),
   updatedAt: undefined,
   tags: [...task.tags],

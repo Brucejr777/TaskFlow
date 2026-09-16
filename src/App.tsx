@@ -14,7 +14,9 @@ import {
   Plus,
   Sun,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
+import { BoardView } from './components/BoardView';
 import { CalendarView } from './components/CalendarView';
 import {
   CommandPalette,
@@ -23,6 +25,7 @@ import {
 import { EmptyState } from './components/EmptyState';
 import { FocusOverlay } from './components/FocusOverlay';
 import { Header } from './components/Header';
+import { InsightsPanel } from './components/InsightsPanel';
 import { ProgressFooter } from './components/ProgressFooter';
 import { QuickAdd } from './components/QuickAdd';
 import { SelectionBar } from './components/SelectionBar';
@@ -51,6 +54,7 @@ import type {
   StatusFilter,
   Task,
   TaskFormValues,
+  TaskStatus,
   ViewMode,
 } from './types';
 import { getNextDueDate } from './utils/date';
@@ -87,6 +91,8 @@ const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
         ...task,
         id: createId(),
         completed: false,
+        status: 'todo',
+        completedAt: undefined,
         archived: false,
         createdAt: Date.now(),
         updatedAt: undefined,
@@ -97,7 +103,13 @@ const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
       });
     }
 
-    return { ...task, completed: true, updatedAt: Date.now() };
+    return {
+      ...task,
+      completed: true,
+      status: 'done' as TaskStatus,
+      completedAt: Date.now(),
+      updatedAt: Date.now(),
+    };
   });
 
   return [...spawned, ...updated];
@@ -128,10 +140,12 @@ function App() {
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [defaultStatus, setDefaultStatus] = useState<TaskStatus>('todo');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   const stats = useMemo(() => getTaskStats(tasks, today), [tasks, today]);
 
@@ -160,11 +174,19 @@ function App() {
 
   const openNewTask = useCallback(() => {
     setEditingTask(null);
+    setDefaultStatus('todo');
+    setFormOpen(true);
+  }, []);
+
+  const openNewTaskInColumn = useCallback((status: TaskStatus) => {
+    setEditingTask(null);
+    setDefaultStatus(status);
     setFormOpen(true);
   }, []);
 
   const openEditTask = useCallback((task: Task) => {
     setEditingTask(task);
+    setDefaultStatus(task.status);
     setFormOpen(true);
   }, []);
 
@@ -289,13 +311,13 @@ function App() {
   }, [notificationsEnabled, push, setNotificationsEnabled]);
 
   const handleQuickAdd = useCallback(
-    (title: string) => {
+    (title: string, dueDate?: string) => {
       const newTask: Task = {
         id: createId(),
         title,
         description: '',
         priority: 'medium',
-        dueDate: '',
+        dueDate: dueDate ?? '',
         completed: false,
         archived: false,
         createdAt: Date.now(),
@@ -303,11 +325,14 @@ function App() {
         subtasks: [],
         recurrence: 'none',
         pinned: false,
+        status: 'todo',
         focusSessions: 0,
         focusMinutes: 0,
       };
       setTasks((current) => [newTask, ...current]);
-      push('Task added', { kind: 'success' });
+      push(dueDate ? 'Task added with due date' : 'Task added', {
+        kind: 'success',
+      });
     },
     [push, setTasks],
   );
@@ -366,6 +391,32 @@ function App() {
       push('Task restored', { kind: 'success' });
     },
     [push, setTasks],
+  );
+
+  const moveTaskToStatus = useCallback(
+    (taskId: string, status: TaskStatus) => {
+      setTasks((current) =>
+        current.map((task) => {
+          if (task.id !== taskId) {
+            return task;
+          }
+
+          const completed = status === 'done';
+          const completedAt = completed
+            ? task.completedAt ?? Date.now()
+            : undefined;
+
+          return {
+            ...task,
+            status,
+            completed,
+            completedAt,
+            updatedAt: Date.now(),
+          };
+        }),
+      );
+    },
+    [setTasks],
   );
 
   const startFocus = useCallback(
@@ -434,6 +485,7 @@ function App() {
       if (event.key === 'n') {
         event.preventDefault();
         setEditingTask(null);
+        setDefaultStatus('todo');
         setFormOpen(true);
         return;
       }
@@ -457,24 +509,46 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [exitSelectionMode, focus.session, formOpen, paletteOpen, selectionMode, shortcutsOpen]);
+  }, [
+    exitSelectionMode,
+    focus.session,
+    formOpen,
+    paletteOpen,
+    selectionMode,
+    shortcutsOpen,
+  ]);
 
   const saveTask = useCallback(
     (values: TaskFormValues, taskId?: string) => {
+      const completed = values.status === 'done';
+
       if (taskId) {
         setTasks((currentTasks) =>
-          currentTasks.map((task) =>
-            task.id === taskId
-              ? { ...task, ...values, updatedAt: Date.now() }
-              : task,
-          ),
+          currentTasks.map((task) => {
+            if (task.id !== taskId) {
+              return task;
+            }
+
+            const completedAt = completed
+              ? task.completedAt ?? Date.now()
+              : undefined;
+
+            return {
+              ...task,
+              ...values,
+              completed,
+              completedAt,
+              updatedAt: Date.now(),
+            };
+          }),
         );
         push('Task updated', { kind: 'success' });
       } else {
         const newTask: Task = {
           id: createId(),
           ...values,
-          completed: false,
+          completed,
+          completedAt: completed ? Date.now() : undefined,
           archived: false,
           createdAt: Date.now(),
           focusSessions: 0,
@@ -500,7 +574,13 @@ function App() {
         if (target.completed) {
           return currentTasks.map((task) =>
             task.id === taskId
-              ? { ...task, completed: false, updatedAt: Date.now() }
+              ? {
+                  ...task,
+                  completed: false,
+                  status: 'todo' as TaskStatus,
+                  completedAt: undefined,
+                  updatedAt: Date.now(),
+                }
               : task,
           );
         }
@@ -535,10 +615,9 @@ function App() {
     }
     const count = selectedIds.size;
     setTasks((currentTasks) => applyCompletion(currentTasks, selectedIds));
-    push(
-      `Completed ${count} ${count === 1 ? 'task' : 'tasks'}`,
-      { kind: 'success' },
-    );
+    push(`Completed ${count} ${count === 1 ? 'task' : 'tasks'}`, {
+      kind: 'success',
+    });
     exitSelectionMode();
   }, [exitSelectionMode, push, selectedIds, setTasks]);
 
@@ -576,15 +655,11 @@ function App() {
     setTasks((currentTasks) =>
       currentTasks.filter((task) => !selectedIds.has(task.id)),
     );
-    push(
-      `Deleted ${count} ${count === 1 ? 'task' : 'tasks'}`,
-      {
-        kind: 'info',
-        actionLabel: 'Undo',
-        onAction: () =>
-          setTasks((currentTasks) => [...removed, ...currentTasks]),
-      },
-    );
+    push(`Deleted ${count} ${count === 1 ? 'task' : 'tasks'}`, {
+      kind: 'info',
+      actionLabel: 'Undo',
+      onAction: () => setTasks((currentTasks) => [...removed, ...currentTasks]),
+    });
     exitSelectionMode();
   }, [exitSelectionMode, push, selectedIds, setTasks, tasks]);
 
@@ -642,6 +717,13 @@ function App() {
         perform: () => setViewMode(viewMode === 'list' ? 'calendar' : 'list'),
       },
       {
+        id: 'toggle-insights',
+        label: insightsOpen ? 'Hide weekly insights' : 'Show weekly insights',
+        keywords: 'insights stats analytics week',
+        icon: TrendingUp,
+        perform: () => setInsightsOpen((current) => !current),
+      },
+      {
         id: 'show-archived',
         label: 'Show archived tasks',
         keywords: 'archive history restore',
@@ -669,7 +751,16 @@ function App() {
         perform: clearCompleted,
       },
     ],
-    [clearCompleted, handleExport, openNewTask, setTheme, setViewMode, theme, viewMode],
+    [
+      clearCompleted,
+      handleExport,
+      insightsOpen,
+      openNewTask,
+      setTheme,
+      setViewMode,
+      theme,
+      viewMode,
+    ],
   );
 
   return (
@@ -715,6 +806,8 @@ function App() {
 
         <StatsGrid stats={stats} />
 
+        {insightsOpen && <InsightsPanel tasks={tasks} today={today} />}
+
         <section className="workspace-section" aria-labelledby="tasks-heading">
           <div className="section-heading">
             <div>
@@ -722,11 +815,7 @@ function App() {
               <h2 id="tasks-heading">Your tasks</h2>
             </div>
             <div className="section-actions">
-              <div
-                className="view-toggle"
-                role="group"
-                aria-label="Switch view"
-              >
+              <div className="view-toggle" role="group" aria-label="Switch view">
                 <button
                   type="button"
                   className={viewMode === 'list' ? 'is-active' : ''}
@@ -743,7 +832,29 @@ function App() {
                 >
                   Calendar
                 </button>
+                <button
+                  type="button"
+                  className={viewMode === 'board' ? 'is-active' : ''}
+                  onClick={() => setViewMode('board')}
+                  aria-pressed={viewMode === 'board'}
+                >
+                  Board
+                </button>
               </div>
+              <button
+                className={`icon-button insights-toggle ${
+                  insightsOpen ? 'is-active' : ''
+                }`}
+                type="button"
+                onClick={() => setInsightsOpen((current) => !current)}
+                aria-pressed={insightsOpen}
+                aria-label={
+                  insightsOpen ? 'Hide weekly insights' : 'Show weekly insights'
+                }
+                title={insightsOpen ? 'Hide weekly insights' : 'Show weekly insights'}
+              >
+                <TrendingUp size={17} />
+              </button>
               <button
                 className="secondary-button"
                 type="button"
@@ -791,6 +902,14 @@ function App() {
                 today={today}
                 onSelectTask={openEditTask}
               />
+            ) : viewMode === 'board' && statusFilter !== 'archived' ? (
+              <BoardView
+                tasks={filteredTasks}
+                today={today}
+                onSelectTask={openEditTask}
+                onMoveTask={moveTaskToStatus}
+                onCreateInColumn={openNewTaskInColumn}
+              />
             ) : (
               <TaskList
                 tasks={filteredTasks}
@@ -823,6 +942,7 @@ function App() {
       <TaskModal
         open={formOpen}
         task={editingTask}
+        defaultStatus={defaultStatus}
         onClose={closeModal}
         onSave={saveTask}
       />

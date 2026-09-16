@@ -1,4 +1,10 @@
-import type { Priority, Recurrence, Subtask, Task } from '../types';
+import type {
+  Priority,
+  Recurrence,
+  Subtask,
+  Task,
+  TaskStatus,
+} from '../types';
 
 export const isPriority = (value: unknown): value is Priority =>
   value === 'low' || value === 'medium' || value === 'high';
@@ -8,6 +14,9 @@ export const isRecurrence = (value: unknown): value is Recurrence =>
   value === 'daily' ||
   value === 'weekly' ||
   value === 'monthly';
+
+export const isTaskStatus = (value: unknown): value is TaskStatus =>
+  value === 'todo' || value === 'in-progress' || value === 'done';
 
 export const parseSubtask = (value: unknown): Subtask | null => {
   if (typeof value !== 'object' || value === null) {
@@ -56,6 +65,14 @@ export const parseTask = (value: unknown): Task | null => {
         .filter((subtask): subtask is Subtask => subtask !== null)
     : [];
 
+  // Derive status when the record predates the field, so older payloads stay
+  // readable and behave sensibly in the board view.
+  const fallbackStatus: TaskStatus = task.completed ? 'done' : 'todo';
+  const status = isTaskStatus(task.status) ? task.status : fallbackStatus;
+
+  const completedAt =
+    typeof task.completedAt === 'number' ? task.completedAt : undefined;
+
   return {
     id: task.id,
     title: task.title,
@@ -66,10 +83,12 @@ export const parseTask = (value: unknown): Task | null => {
     archived: typeof task.archived === 'boolean' ? task.archived : false,
     createdAt: task.createdAt,
     updatedAt: typeof task.updatedAt === 'number' ? task.updatedAt : undefined,
+    completedAt,
     tags,
     subtasks,
     recurrence: isRecurrence(task.recurrence) ? task.recurrence : 'none',
     pinned: typeof task.pinned === 'boolean' ? task.pinned : false,
+    status,
     focusSessions: typeof task.focusSessions === 'number' ? task.focusSessions : 0,
     focusMinutes: typeof task.focusMinutes === 'number' ? task.focusMinutes : 0,
   };

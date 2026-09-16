@@ -1,4 +1,10 @@
-import type { Priority, Recurrence, SortOption, StatusFilter } from './types';
+import type {
+  Priority,
+  Recurrence,
+  SortOption,
+  StatusFilter,
+  TaskStatus,
+} from './types';
 
 export const STORAGE_KEY = 'taskflow.tasks.v1';
 export const THEME_KEY = 'taskflow.theme.v1';
@@ -62,3 +68,11 @@ export const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'dueDate', label: 'Due date' },
   { value: 'priority', label: 'Priority' },
 ];
+
+export const taskStatusLabels: Record<TaskStatus, string> = {
+  todo: 'To Do',
+  'in-progress': 'In Progress',
+  done: 'Done',
+};
+
+export const taskStatusOptions: TaskStatus[] = ['todo', 'in-progress', 'done'];

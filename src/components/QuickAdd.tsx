@@ -1,9 +1,11 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
-import { CornerDownLeft, Plus } from 'lucide-react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { CalendarDays, CornerDownLeft, Plus } from 'lucide-react';
 import { TASK_TITLE_MAX_LENGTH } from '../constants';
+import { formatDate } from '../utils/date';
+import { parseNaturalDate } from '../utils/naturalDate';
 
 interface QuickAddProps {
-  onAdd: (title: string) => void;
+  onAdd: (title: string, dueDate?: string) => void;
 }
 
 export function QuickAdd({ onAdd }: QuickAddProps) {
@@ -11,12 +13,26 @@ export function QuickAdd({ onAdd }: QuickAddProps) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const parsed = useMemo(
+    () => (value.trim() ? parseNaturalDate(value) : null),
+    [value],
+  );
+
   const submit = () => {
-    const title = value.trim();
+    const raw = value.trim();
+    if (!raw) {
+      return;
+    }
+
+    const detection = parseNaturalDate(raw);
+    const title = detection ? detection.rest : raw;
+    const dueDate = detection?.dueDate;
+
     if (!title) {
       return;
     }
-    onAdd(title);
+
+    onAdd(title, dueDate);
     setValue('');
     inputRef.current?.focus();
   };
@@ -36,26 +52,34 @@ export function QuickAdd({ onAdd }: QuickAddProps) {
 
   return (
     <div className={`quick-add ${expanded ? 'is-expanded' : ''}`}>
-      <span className="quick-add-icon" aria-hidden="true">
-        <Plus size={16} />
-      </span>
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onKeyDown={handleKeyDown}
-        placeholder="Quick add a task and press Enter"
-        maxLength={TASK_TITLE_MAX_LENGTH}
-        aria-label="Quick add task"
-      />
-      {value && (
-        <button type="button" className="quick-add-submit" onClick={submit}>
-          Add
-          <CornerDownLeft size={12} />
-        </button>
+      <div className="quick-add-row">
+        <span className="quick-add-icon" aria-hidden="true">
+          <Plus size={16} />
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onKeyDown={handleKeyDown}
+          placeholder="Quick add — try “call mom tomorrow”"
+          maxLength={TASK_TITLE_MAX_LENGTH + 40}
+          aria-label="Quick add task"
+        />
+        {value && (
+          <button type="button" className="quick-add-submit" onClick={submit}>
+            Add
+            <CornerDownLeft size={12} />
+          </button>
+        )}
+      </div>
+      {parsed && (
+        <span className="quick-add-preview">
+          <CalendarDays size={12} />
+          Due {formatDate(parsed.dueDate)}
+        </span>
       )}
     </div>
   );

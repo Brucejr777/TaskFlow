@@ -8,9 +8,7 @@
 
 .quick-add {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 46px;
+  flex-direction: column;
   margin-bottom: 16px;
   padding: 0 12px 0 14px;
   border: 1px dashed var(--border-strong);
@@ -26,6 +24,13 @@
   border-color: var(--primary);
   background: var(--surface-1);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.quick-add-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
 }
 
 .quick-add-icon {
@@ -82,6 +87,20 @@
   transform: translateY(0);
 }
 
+.quick-add-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 10px 34px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
 /* ---------- Header notification toggle ---------- */
 
 .notification-button.is-active {
@@ -94,6 +113,15 @@
 .header-icon-group .notification-button.is-active:hover {
   background: var(--primary);
   color: #ffffff;
+}
+
+/* ---------- Insights toggle in section actions ---------- */
+
+.insights-toggle.is-active {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* ---------- Archived tasks ---------- */
@@ -130,7 +158,6 @@
   color: var(--primary-strong);
 }
 
-/* On the six-action cards, tighten the gap and hover lift just slightly. */
 .task-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -180,7 +207,6 @@
 /* ---------- Selection bar (with new Archive action) ---------- */
 
 .selection-actions .secondary-button:nth-of-type(2) {
-  /* The Archive button should still read as a safe, secondary action. */
   color: var(--text);
 }
 
@@ -237,6 +263,337 @@
   border-radius: var(--radius-pill);
 }
 
+/* ---------- Task modal: status selector ---------- */
+
+.status-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.status-option {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease),
+    color 160ms var(--ease), transform 160ms var(--ease);
+}
+
+.status-option:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.status-option.is-selected {
+  border-color: currentColor;
+}
+
+.status-option.status-todo.is-selected {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.status-option.status-in-progress.is-selected {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.status-option.status-done.is-selected {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* ---------- Board (Kanban) view ---------- */
+
+.board-view {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.board-column {
+  display: flex;
+  min-height: 340px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.board-column.is-drop-target {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary-soft) 45%, var(--surface-2));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.board-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.board-column-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.board-status-dot.status-todo {
+  background: var(--text-faint);
+}
+.board-status-dot.status-in-progress {
+  background: var(--info);
+}
+.board-status-dot.status-done {
+  background: var(--success);
+}
+
+.board-column-title h3 {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.board-count {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-add-button {
+  width: 30px;
+  height: 30px;
+}
+
+.board-column-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.board-empty {
+  margin: 26px 0;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+.board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  cursor: grab;
+  transition: border-color 160ms var(--ease), transform 160ms var(--ease),
+    box-shadow 160ms var(--ease), opacity 160ms var(--ease);
+}
+
+.board-card:active {
+  cursor: grabbing;
+}
+
+.board-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.board-card.is-dragging {
+  opacity: 0.4;
+}
+
+.board-card.priority-high {
+  border-left: 3px solid var(--danger);
+}
+.board-card.priority-medium {
+  border-left: 3px solid var(--warning);
+}
+.board-card.priority-low {
+  border-left: 3px solid var(--success);
+}
+
+.board-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.board-card-head h4 {
+  flex: 1;
+  margin: 0;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+.board-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.board-card-tags .tag-chip {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.board-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.board-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- Weekly insights ---------- */
+
+.insights-panel {
+  margin-bottom: 22px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  animation: task-in 260ms var(--ease);
+}
+
+.insights-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.insights-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.insights-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  height: 140px;
+  align-items: end;
+  padding: 0 4px 6px;
+}
+
+.insight-bar-wrap {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.insight-bar {
+  position: relative;
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, var(--primary), #38c7bb);
+  transition: height 400ms var(--ease);
+}
+
+.insight-bar span {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text-soft);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.insight-bar-label {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.insights-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.insight-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+}
+
+.insight-stat > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.insight-stat strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.insight-stat span {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+@media (max-width: 960px) {
+  .board-view {
+    grid-template-columns: 1fr;
+  }
+
+  .board-column {
+    min-height: 200px;
+  }
+}
+
 @media (max-width: 620px) {
   .quick-add {
     padding-inline: 10px 8px;
@@ -254,5 +611,19 @@
   .selection-actions .icon-button {
     grid-column: span 2;
     justify-self: end;
+  }
+
+  .insights-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-chart {
+    height: 110px;
+    gap: 6px;
+  }
+
+  .status-option {
+    padding-inline: 4px;
+    font-size: 10.5px;
   }
 }
