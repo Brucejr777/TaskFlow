@@ -6,7 +6,12 @@ import {
   type FormEvent,
 } from 'react';
 import { Flag, Pencil, Plus, X } from 'lucide-react';
-import { priorityLabels, priorityOptions } from '../constants';
+import {
+  TASK_DESCRIPTION_MAX_LENGTH,
+  TASK_TITLE_MAX_LENGTH,
+  priorityLabels,
+  priorityOptions,
+} from '../constants';
 import type { Task, TaskFormValues } from '../types';
 import { toDateInputValue } from '../utils/date';
 
@@ -17,15 +22,15 @@ interface TaskModalProps {
   onSave: (values: TaskFormValues, taskId?: string) => void;
 }
 
-const emptyForm: TaskFormValues = {
+const createEmptyForm = (): TaskFormValues => ({
   title: '',
   description: '',
   priority: 'medium',
   dueDate: '',
-};
+});
 
 export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
-  const [formValues, setFormValues] = useState<TaskFormValues>(emptyForm);
+  const [formValues, setFormValues] = useState<TaskFormValues>(createEmptyForm);
   const [formError, setFormError] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -44,7 +49,7 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
             priority: task.priority,
             dueDate: task.dueDate,
           }
-        : emptyForm,
+        : createEmptyForm(),
     );
     setFormError('');
   }, [open, task]);
@@ -54,9 +59,14 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
       return undefined;
     }
 
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const timer = window.setTimeout(() => titleInputRef.current?.focus(), 40);
+    const focusTimer = window.setTimeout(() => titleInputRef.current?.focus(), 40);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -72,14 +82,17 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
         modalRef.current.querySelectorAll<HTMLElement>(
           'button, input, textarea, select, [href], [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((element) => !element.hasAttribute('disabled') && element.offsetParent !== null);
+      ).filter(
+        (element) =>
+          !element.hasAttribute('disabled') && element.offsetParent !== null,
+      );
 
       if (focusableElements.length === 0) {
         return;
       }
 
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
+      const firstElement = focusableElements[0]!;
+      const lastElement = focusableElements[focusableElements.length - 1]!;
 
       if (event.shiftKey && document.activeElement === firstElement) {
         event.preventDefault();
@@ -93,9 +106,10 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(focusTimer);
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
     };
   }, [open, onClose]);
 
@@ -161,7 +175,7 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
                 setFormValues({ ...formValues, title: event.target.value })
               }
               placeholder="e.g. Review the project brief"
-              maxLength={120}
+              maxLength={TASK_TITLE_MAX_LENGTH}
             />
           </label>
           <label className="form-field">
@@ -173,7 +187,7 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               }
               placeholder="Add context, links, or next steps..."
               rows={4}
-              maxLength={500}
+              maxLength={TASK_DESCRIPTION_MAX_LENGTH}
             />
           </label>
           <div className="form-row">

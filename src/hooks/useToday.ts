@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getToday } from '../utils/date';
 
+const refreshToday = (current: Date): Date => {
+  const next = getToday();
+  return next.getTime() === current.getTime() ? current : next;
+};
+
 export function useToday(): Date {
   const [today, setToday] = useState<Date>(getToday);
 
   useEffect(() => {
-    const updateToday = () => setToday(getToday());
+    const updateToday = () => setToday((current) => refreshToday(current));
 
     const intervalId = window.setInterval(updateToday, 60_000);
     const handleVisibilityChange = () => {

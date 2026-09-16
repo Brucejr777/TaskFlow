@@ -4,12 +4,18 @@ import argparse
 from pathlib import Path
 
 DEFAULT_EXCLUDED_DIRECTORIES = {
+    ".cache",
     ".git",
     ".kilo",
+    ".next",
+    ".turbo",
     ".venv",
     "__pycache__",
+    "build",
+    "coverage",
     "dist",
     "node_modules",
+    "out",
     "venv",
 }
 BINARY_EXTENSIONS = {
@@ -86,7 +92,10 @@ def collect_files(directory: Path, output: Path) -> list[Path]:
         for path in directory.rglob("*")
         if path.is_file()
         and path.resolve() != output.resolve()
-        and not any(part in DEFAULT_EXCLUDED_DIRECTORIES for part in path.relative_to(directory).parts[:-1])
+        and not any(
+            part in DEFAULT_EXCLUDED_DIRECTORIES
+            for part in path.relative_to(directory).parts[:-1]
+        )
     ]
     return sorted(files, key=lambda path: path.relative_to(directory).as_posix())
 
@@ -123,14 +132,20 @@ def combine_files(directory: Path, output: Path) -> tuple[int, int]:
 
 def main() -> None:
     arguments = parse_arguments()
-    directory = arguments.directory.resolve() if arguments.directory else Path(__file__).resolve().parent
+    directory = (
+        arguments.directory.resolve()
+        if arguments.directory
+        else Path(__file__).resolve().parent
+    )
     output = arguments.output.resolve() if arguments.output else directory / "context.txt"
 
     if not directory.is_dir():
         raise SystemExit(f"Directory not found: {directory}")
 
     file_count, binary_count = combine_files(directory, output)
-    print(f"Combined {file_count} files into {output} ({binary_count} binary files omitted).")
+    print(
+        f"Combined {file_count} files into {output} ({binary_count} binary files omitted)."
+    )
 
 
 if __name__ == "__main__":

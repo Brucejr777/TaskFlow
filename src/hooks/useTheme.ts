@@ -27,11 +27,29 @@ export function useTheme(): [Theme, Dispatch<SetStateAction<Theme>>] {
       // Ignore storage access errors.
     }
 
-    const metaTheme = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const metaTheme = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]',
+    );
     if (metaTheme) {
       metaTheme.content = theme === 'dark' ? '#111318' : '#f5f7fb';
     }
   }, [theme]);
+
+  // Sync theme changes across tabs.
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_KEY) {
+        return;
+      }
+
+      if (event.newValue === 'light' || event.newValue === 'dark') {
+        setTheme(event.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   return [theme, setTheme];
 }

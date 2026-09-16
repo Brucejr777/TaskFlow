@@ -1,4 +1,5 @@
 import { CalendarDays, Check, Moon, Sun } from 'lucide-react';
+import { useToday } from '../hooks/useToday';
 import type { Theme } from '../types';
 
 interface HeaderProps {
@@ -13,6 +14,7 @@ const headerDateFormatter = new Intl.DateTimeFormat(undefined, {
 });
 
 export function Header({ theme, onToggleTheme }: HeaderProps) {
+  const today = useToday();
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
 
   return (
@@ -29,7 +31,7 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
       <div className="topbar-actions">
         <div className="date-chip">
           <CalendarDays size={15} />
-          <span>{headerDateFormatter.format(new Date())}</span>
+          <span>{headerDateFormatter.format(today)}</span>
         </div>
         <button
           className="icon-button theme-toggle"

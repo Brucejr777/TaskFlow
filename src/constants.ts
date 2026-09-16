@@ -3,6 +3,10 @@ import type { Priority, SortOption, StatusFilter } from './types';
 export const STORAGE_KEY = 'taskflow.tasks.v1';
 export const THEME_KEY = 'taskflow.theme.v1';
 
+export const TASK_TITLE_MAX_LENGTH = 120;
+export const TASK_DESCRIPTION_MAX_LENGTH = 500;
+export const TOAST_DURATION_MS = 5000;
+
 export const priorityLabels: Record<Priority, string> = {
   low: 'Low',
   medium: 'Medium',

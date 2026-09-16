@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { CalendarDays, Check, Flag, Pencil, Trash2 } from 'lucide-react';
 import { priorityLabels } from '../constants';
 import type { Task } from '../types';
@@ -11,7 +12,13 @@ interface TaskCardProps {
   onDelete: (taskId: string) => void;
 }
 
-export function TaskCard({ task, today, onToggle, onEdit, onDelete }: TaskCardProps) {
+function TaskCardComponent({
+  task,
+  today,
+  onToggle,
+  onEdit,
+  onDelete,
+}: TaskCardProps) {
   const overdueTask = isOverdue(task, today);
 
   return (
@@ -73,3 +80,5 @@ export function TaskCard({ task, today, onToggle, onEdit, onDelete }: TaskCardPr
     </article>
   );
 }
+
+export const TaskCard = memo(TaskCardComponent);

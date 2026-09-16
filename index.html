@@ -13,6 +13,23 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%236857e6%22/><path d=%22M28 52l14 14 30-34%22 stroke=%22white%22 stroke-width=%2212%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>"
     />
     <title>TaskFlow</title>
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('taskflow.theme.v1');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.dataset.theme = theme;
+        } catch (error) {
+          /* Storage may be unavailable. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

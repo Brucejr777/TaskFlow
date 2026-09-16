@@ -28,3 +28,14 @@ export interface TaskStats {
   overdue: number;
   progress: number;
 }
+
+export type ToastKind = 'info' | 'success' | 'warning' | 'error';
+
+export interface Toast {
+  id: string;
+  message: string;
+  kind: ToastKind;
+  actionLabel?: string;
+  onAction?: () => void;
+  duration?: number;
+}

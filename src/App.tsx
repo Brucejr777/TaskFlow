@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Plus } from 'lucide-react';
 import { EmptyState } from './components/EmptyState';
 import { Header } from './components/Header';
@@ -7,18 +13,45 @@ import { StatsGrid } from './components/StatsGrid';
 import { TaskControls } from './components/TaskControls';
 import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
+import { ToastViewport } from './components/Toast';
 import { STORAGE_KEY } from './constants';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useTheme } from './hooks/useTheme';
+import { useToasts } from './hooks/useToasts';
 import { useToday } from './hooks/useToday';
-import type { Priority, SortOption, StatusFilter, Task, TaskFormValues } from './types';
-import { createId, filterAndSortTasks, getTaskStats, isTaskArray } from './utils/tasks';
+import type {
+  Priority,
+  SortOption,
+  StatusFilter,
+  Task,
+  TaskFormValues,
+} from './types';
+import { filterAndSortTasks } from './utils/filters';
+import { createId } from './utils/id';
+import { getTaskStats } from './utils/stats';
+import { isTaskArray } from './utils/validation';
+
+const isTypingTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT'
+  );
+};
 
 function App() {
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEY, [], isTaskArray);
   const [theme, setTheme] = useTheme();
   const today = useToday();
+  const { toasts, push, dismiss } = useToasts();
+
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
@@ -30,13 +63,13 @@ function App() {
   const filteredTasks = useMemo(
     () =>
       filterAndSortTasks(tasks, {
-        search,
+        search: deferredSearch,
         statusFilter,
         priorityFilter,
         sortOption,
         today,
       }),
-    [tasks, search, statusFilter, priorityFilter, sortOption, today],
+    [tasks, deferredSearch, statusFilter, priorityFilter, sortOption, today],
   );
 
   const openNewTask = useCallback(() => {
@@ -54,6 +87,32 @@ function App() {
     setEditingTask(null);
   }, []);
 
+  // Press "n" anywhere outside a form field to create a new task.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (formOpen || event.defaultPrevented) {
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+
+      if (event.key === 'n') {
+        event.preventDefault();
+        setEditingTask(null);
+        setFormOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [formOpen]);
+
   const saveTask = useCallback(
     (values: TaskFormValues, taskId?: string) => {
       if (taskId) {
@@ -64,6 +123,7 @@ function App() {
               : task,
           ),
         );
+        push('Task updated', { kind: 'success' });
       } else {
         const newTask: Task = {
           id: createId(),
@@ -72,11 +132,12 @@ function App() {
           createdAt: Date.now(),
         };
         setTasks((currentTasks) => [newTask, ...currentTasks]);
+        push('Task created', { kind: 'success' });
       }
 
       closeModal();
     },
-    [closeModal, setTasks],
+    [closeModal, push, setTasks],
   );
 
   const toggleTask = useCallback(
@@ -92,18 +153,41 @@ function App() {
 
   const deleteTask = useCallback(
     (taskId: string) => {
-      if (window.confirm('Delete this task? This cannot be undone.')) {
-        setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+      const target = tasks.find((task) => task.id === taskId);
+      if (!target) {
+        return;
       }
+
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+
+      push('Task deleted', {
+        kind: 'info',
+        actionLabel: 'Undo',
+        onAction: () => setTasks((currentTasks) => [target, ...currentTasks]),
+      });
     },
-    [setTasks],
+    [push, setTasks, tasks],
   );
 
   const clearCompleted = useCallback(() => {
-    if (window.confirm('Clear all completed tasks?')) {
-      setTasks((currentTasks) => currentTasks.filter((task) => !task.completed));
+    const removed = tasks.filter((task) => task.completed);
+    if (removed.length === 0) {
+      return;
     }
-  }, [setTasks]);
+
+    setTasks((currentTasks) => currentTasks.filter((task) => !task.completed));
+
+    push(
+      `Cleared ${removed.length} completed ${
+        removed.length === 1 ? 'task' : 'tasks'
+      }`,
+      {
+        kind: 'info',
+        actionLabel: 'Undo',
+        onAction: () => setTasks((currentTasks) => [...removed, ...currentTasks]),
+      },
+    );
+  }, [push, setTasks, tasks]);
 
   const clearFilters = useCallback(() => {
     setSearch('');
@@ -128,11 +212,15 @@ function App() {
               <span>Move forward.</span>
             </h1>
             <p className="hero-copy">
-              Capture the work ahead, keep deadlines in sight, and turn busy days into
-              clear next steps.
+              Capture the work ahead, keep deadlines in sight, and turn busy days
+              into clear next steps.
             </p>
           </div>
-          <button className="primary-button hero-action" type="button" onClick={openNewTask}>
+          <button
+            className="primary-button hero-action"
+            type="button"
+            onClick={openNewTask}
+          >
             <Plus size={18} />
             <span>Add a task</span>
           </button>
@@ -146,7 +234,11 @@ function App() {
               <p className="section-kicker">Task list</p>
               <h2 id="tasks-heading">Your tasks</h2>
             </div>
-            <button className="secondary-button" type="button" onClick={openNewTask}>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={openNewTask}
+            >
               <Plus size={17} />
               New task
             </button>
@@ -189,6 +281,8 @@ function App() {
         onClose={closeModal}
         onSave={saveTask}
       />
+
+      <ToastViewport toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

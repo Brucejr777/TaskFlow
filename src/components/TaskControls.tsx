@@ -45,12 +45,14 @@ export function TaskControls({
           </button>
         )}
       </label>
-      <div className="filter-group" aria-label="Task filters">
+      <div className="filter-group" role="group" aria-label="Task filters">
         <div className="filter-select-wrap">
-          <Filter size={15} />
+          <Filter size={15} aria-hidden="true" />
           <select
             value={statusFilter}
-            onChange={(event) => onStatusFilterChange(event.target.value as StatusFilter)}
+            onChange={(event) =>
+              onStatusFilterChange(event.target.value as StatusFilter)
+            }
             aria-label="Filter by status"
           >
             {statusOptions.map((option) => (
@@ -61,7 +63,7 @@ export function TaskControls({
           </select>
         </div>
         <div className="filter-select-wrap">
-          <Flag size={15} />
+          <Flag size={15} aria-hidden="true" />
           <select
             value={priorityFilter}
             onChange={(event) =>
@@ -78,10 +80,12 @@ export function TaskControls({
           </select>
         </div>
         <div className="filter-select-wrap sort-select-wrap">
-          <ArrowUpDown size={15} />
+          <ArrowUpDown size={15} aria-hidden="true" />
           <select
             value={sortOption}
-            onChange={(event) => onSortOptionChange(event.target.value as SortOption)}
+            onChange={(event) =>
+              onSortOptionChange(event.target.value as SortOption)
+            }
             aria-label="Sort tasks"
           >
             {sortOptions.map((option) => (

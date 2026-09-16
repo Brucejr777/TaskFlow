@@ -38,8 +38,12 @@ export const isOverdue = (task: Task, today: Date): boolean => {
     return false;
   }
 
-  const dueDate = new Date(`${task.dueDate}T23:59:59`);
-  return dueDate < today;
+  const dueDate = parseDueDate(task.dueDate);
+  if (!dueDate) {
+    return false;
+  }
+
+  return toDateInputValue(dueDate) < toDateInputValue(today);
 };
 
 export const formatDate = (value: string): string => {
