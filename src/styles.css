@@ -489,6 +489,56 @@ textarea:focus-visible,
 }
 
 /* =========================================================
+   Command palette trigger (header)
+   ========================================================= */
+
+.palette-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-glass);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 160ms var(--ease), color 160ms var(--ease),
+    background-color 160ms var(--ease), transform 160ms var(--ease);
+}
+
+.palette-trigger:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  transform: translateY(-1px);
+}
+
+.palette-trigger svg {
+  color: var(--primary);
+}
+
+.palette-trigger kbd {
+  display: inline-grid;
+  min-width: 30px;
+  height: 22px;
+  padding: 0 6px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface-1);
+  color: var(--text-soft);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* =========================================================
    Hero
    ========================================================= */
 
@@ -766,6 +816,38 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* View toggle */
+
+.view-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.view-toggle button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 3px);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.view-toggle button:hover {
+  color: var(--text);
+}
+
+.view-toggle button.is-active {
+  background: var(--surface-1);
+  color: var(--primary-strong);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Task controls */
@@ -1088,6 +1170,19 @@ textarea:focus-visible,
   color: var(--success);
 }
 
+.focus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--info-soft);
+  color: var(--info);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -1255,6 +1350,12 @@ textarea:focus-visible,
   border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.task-action-button.focus-button:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  background: var(--primary-soft);
+  color: var(--primary-strong);
 }
 
 /* =========================================================
@@ -1918,6 +2019,401 @@ textarea:focus-visible,
 }
 
 /* =========================================================
+   Command palette
+   ========================================================= */
+
+.palette-backdrop {
+  z-index: 30;
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.command-palette {
+  width: min(620px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 200ms var(--ease-spring);
+}
+
+.palette-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+.palette-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.palette-search input::placeholder {
+  color: var(--text-faint);
+}
+
+.palette-search kbd {
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.palette-list {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+}
+
+.palette-empty {
+  padding: 26px;
+  color: var(--text-faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+.palette-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  transition: background-color 120ms var(--ease), border-color 120ms var(--ease),
+    color 120ms var(--ease);
+}
+
+.palette-item.is-active {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.palette-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+}
+
+.palette-item.is-active .palette-icon {
+  background: var(--surface-1);
+  color: var(--primary);
+}
+
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-hint {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.palette-enter {
+  color: var(--primary);
+}
+
+.palette-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.palette-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-footer kbd {
+  display: inline-grid;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-1);
+  color: var(--text-soft);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   Focus session overlay
+   ========================================================= */
+
+.focus-backdrop {
+  z-index: 25;
+  background: rgba(12, 14, 24, 0.72);
+}
+
+.focus-overlay {
+  position: relative;
+  display: flex;
+  width: min(460px, 100%);
+  align-items: center;
+  flex-direction: column;
+  padding: 36px 30px 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: modal-in 240ms var(--ease-spring);
+}
+
+.focus-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.focus-task-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.focus-ring-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 22px 0;
+}
+
+.focus-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.focus-ring-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 8;
+}
+
+.focus-ring-fill {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms linear;
+}
+
+.focus-time {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* =========================================================
+   Calendar view
+   ========================================================= */
+
+.calendar-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.calendar-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekdays span {
+  padding: 6px 0;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendar-cell {
+  display: flex;
+  min-height: 104px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
+}
+
+.calendar-cell:hover {
+  border-color: var(--border-strong);
+}
+
+.calendar-cell.is-outside {
+  opacity: 0.45;
+}
+
+.calendar-cell.is-today {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary-soft) 55%, var(--surface-1));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.calendar-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.calendar-day {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-cell.is-today .calendar-day {
+  color: var(--primary-strong);
+}
+
+.calendar-count {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.calendar-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-task {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease),
+    color 140ms var(--ease);
+}
+
+.calendar-task.priority-high {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.calendar-task.priority-medium {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.calendar-task.priority-low {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.calendar-task:hover {
+  filter: brightness(0.96);
+}
+
+.calendar-task.is-completed {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.calendar-more {
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding-left: 2px;
+}
+
+/* =========================================================
    Error fallback
    ========================================================= */
 
@@ -2082,6 +2578,14 @@ textarea:focus-visible,
   .filter-select-wrap select {
     width: 100%;
   }
+
+  .palette-trigger span {
+    display: none;
+  }
+
+  .palette-trigger {
+    padding: 0 10px;
+  }
 }
 
 @media (max-width: 620px) {
@@ -2164,6 +2668,14 @@ textarea:focus-visible,
     min-height: 38px;
     padding-inline: 11px;
     font-size: 12px;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle button {
+    flex: 1;
   }
 
   .filter-group {
@@ -2269,6 +2781,38 @@ textarea:focus-visible,
   .toast-viewport {
     bottom: 14px;
     width: calc(100% - 20px);
+  }
+
+  .calendar-cell {
+    min-height: 82px;
+    padding: 6px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 10px;
+  }
+
+  .calendar-task {
+    font-size: 10px;
+    padding: 3px 5px;
+  }
+
+  .focus-ring-wrap {
+    width: 180px;
+    height: 180px;
+  }
+
+  .focus-time {
+    font-size: 34px;
+  }
+
+  .focus-actions {
+    width: 100%;
+  }
+
+  .focus-actions .primary-button,
+  .focus-actions .secondary-button {
+    flex: 1;
   }
 }
 

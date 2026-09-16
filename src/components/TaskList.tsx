@@ -11,6 +11,7 @@ interface TaskListProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onTogglePin: (taskId: string) => void;
+  onStartFocus: (task: Task) => void;
 }
 
 export function TaskList({
@@ -23,6 +24,7 @@ export function TaskList({
   onEdit,
   onDelete,
   onTogglePin,
+  onStartFocus,
 }: TaskListProps) {
   return (
     <div className="task-list">
@@ -38,6 +40,7 @@ export function TaskList({
           onEdit={onEdit}
           onDelete={onDelete}
           onTogglePin={onTogglePin}
+          onStartFocus={onStartFocus}
         />
       ))}
     </div>

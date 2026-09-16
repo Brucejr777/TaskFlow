@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import {
   CalendarDays,
   Check,
+  Command,
   Download,
   Keyboard,
   Moon,
@@ -17,6 +18,7 @@ interface HeaderProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onShowShortcuts: () => void;
+  onOpenPalette: () => void;
 }
 
 const headerDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -31,6 +33,7 @@ export function Header({
   onExport,
   onImport,
   onShowShortcuts,
+  onOpenPalette,
 }: HeaderProps) {
   const today = useToday();
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -47,11 +50,25 @@ export function Header({
           <div className="brand-tagline">Make space for what matters</div>
         </div>
       </div>
+
       <div className="topbar-actions">
         <div className="date-chip">
           <CalendarDays size={15} />
           <span>{headerDateFormatter.format(today)}</span>
         </div>
+
+        <button
+          className="palette-trigger"
+          type="button"
+          onClick={onOpenPalette}
+          aria-label="Open command palette"
+          title="Open command palette (Ctrl/Cmd+K)"
+        >
+          <Command size={15} />
+          <span>Search or run a command</span>
+          <kbd>⌘K</kbd>
+        </button>
+
         <div className="header-icon-group">
           <button
             className="icon-button"
@@ -90,6 +107,7 @@ export function Header({
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
+
         <input
           ref={fileInputRef}
           type="file"

@@ -5,8 +5,23 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { ListChecks, Plus } from 'lucide-react';
+import {
+  CalendarRange,
+  Download,
+  Keyboard,
+  ListChecks,
+  Moon,
+  Plus,
+  Sun,
+  Trash2,
+} from 'lucide-react';
+import { CalendarView } from './components/CalendarView';
+import {
+  CommandPalette,
+  type PaletteCommand,
+} from './components/CommandPalette';
 import { EmptyState } from './components/EmptyState';
+import { FocusOverlay } from './components/FocusOverlay';
 import { Header } from './components/Header';
 import { ProgressFooter } from './components/ProgressFooter';
 import { SelectionBar } from './components/SelectionBar';
@@ -16,7 +31,12 @@ import { TaskControls } from './components/TaskControls';
 import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
 import { ToastViewport } from './components/Toast';
-import { STORAGE_KEY } from './constants';
+import {
+  DEFAULT_FOCUS_MINUTES,
+  STORAGE_KEY,
+  VIEW_MODE_KEY,
+} from './constants';
+import { useFocusSession } from './hooks/useFocusSession';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useTheme } from './hooks/useTheme';
 import { useToasts } from './hooks/useToasts';
@@ -27,6 +47,7 @@ import type {
   StatusFilter,
   Task,
   TaskFormValues,
+  ViewMode,
 } from './types';
 import { getNextDueDate } from './utils/date';
 import { downloadTasks, extractTasksFromImport } from './utils/export';
@@ -48,7 +69,6 @@ const isTypingTarget = (target: EventTarget | null): boolean => {
   );
 };
 
-/** Marks the given tasks as completed, spawning the next occurrence for recurring ones. */
 const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
   const spawned: Task[] = [];
 
@@ -66,6 +86,8 @@ const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
         updatedAt: undefined,
         dueDate: getNextDueDate(task.dueDate, task.recurrence),
         subtasks: task.subtasks.map((subtask) => ({ ...subtask, done: false })),
+        focusSessions: 0,
+        focusMinutes: 0,
       });
     }
 
@@ -78,8 +100,13 @@ const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
 function App() {
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEY, [], parseTasks);
   const [theme, setTheme] = useTheme();
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(
+    VIEW_MODE_KEY,
+    'list',
+  );
   const today = useToday();
   const { toasts, push, dismiss } = useToasts();
+  const focus = useFocusSession();
 
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
@@ -90,6 +117,7 @@ function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -218,14 +246,56 @@ function App() {
     [push, setTasks],
   );
 
+  const startFocus = useCallback(
+    (task: Task) => {
+      focus.start(task.id, task.title, DEFAULT_FOCUS_MINUTES);
+    },
+    [focus],
+  );
+
+  const completeFocusTask = useCallback(() => {
+    if (!focus.session) {
+      return;
+    }
+    const { taskId, durationMs, taskTitle } = focus.session;
+    const minutes = Math.max(1, Math.round(durationMs / 60000));
+
+    setTasks((current) => {
+      const withFocus = current.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              focusSessions: task.focusSessions + 1,
+              focusMinutes: task.focusMinutes + minutes,
+            }
+          : task,
+      );
+      return applyCompletion(withFocus, new Set([taskId]));
+    });
+
+    push(`Completed "${taskTitle}" · +${minutes}m logged`, { kind: 'success' });
+    focus.stop();
+  }, [focus, push, setTasks]);
+
   // Global keyboard shortcuts.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+      if (event.defaultPrevented) {
         return;
       }
 
-      if (formOpen || shortcutsOpen) {
+      // Command palette (works regardless of other state).
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      if (formOpen || shortcutsOpen || paletteOpen || focus.session) {
         return;
       }
 
@@ -265,7 +335,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [exitSelectionMode, formOpen, selectionMode, shortcutsOpen]);
+  }, [exitSelectionMode, focus.session, formOpen, paletteOpen, selectionMode, shortcutsOpen]);
 
   const saveTask = useCallback(
     (values: TaskFormValues, taskId?: string) => {
@@ -284,6 +354,8 @@ function App() {
           ...values,
           completed: false,
           createdAt: Date.now(),
+          focusSessions: 0,
+          focusMinutes: 0,
         };
         setTasks((currentTasks) => [newTask, ...currentTasks]);
         push('Task created', { kind: 'success' });
@@ -395,14 +467,67 @@ function App() {
     setTagFilter('');
   }, []);
 
+  const paletteCommands: PaletteCommand[] = useMemo(
+    () => [
+      {
+        id: 'new-task',
+        label: 'Create a new task',
+        hint: 'N',
+        keywords: 'add create',
+        icon: Plus,
+        perform: openNewTask,
+      },
+      {
+        id: 'toggle-theme',
+        label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+        keywords: 'theme appearance dark light',
+        icon: theme === 'dark' ? Sun : Moon,
+        perform: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+      },
+      {
+        id: 'toggle-view',
+        label: `Show ${viewMode === 'list' ? 'calendar' : 'list'} view`,
+        keywords: 'view calendar list',
+        icon: CalendarRange,
+        perform: () => setViewMode(viewMode === 'list' ? 'calendar' : 'list'),
+      },
+      {
+        id: 'export',
+        label: 'Export tasks as JSON',
+        icon: Download,
+        perform: handleExport,
+      },
+      {
+        id: 'shortcuts',
+        label: 'Show keyboard shortcuts',
+        hint: '?',
+        icon: Keyboard,
+        perform: () => setShortcutsOpen(true),
+      },
+      {
+        id: 'clear-completed',
+        label: 'Clear completed tasks',
+        keywords: 'remove done',
+        icon: Trash2,
+        perform: clearCompleted,
+      },
+    ],
+    [clearCompleted, handleExport, openNewTask, setTheme, setViewMode, theme, viewMode],
+  );
+
   return (
-    <div className={`app-shell ${selectionMode ? 'has-selection-bar' : ''}`}>
+    <div
+      className={`app-shell ${selectionMode ? 'has-selection-bar' : ''} ${
+        focus.session ? 'has-focus-session' : ''
+      }`}
+    >
       <Header
         theme={theme}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onExport={handleExport}
         onImport={handleImport}
         onShowShortcuts={() => setShortcutsOpen(true)}
+        onOpenPalette={() => setPaletteOpen(true)}
       />
 
       <main className="page-container">
@@ -438,6 +563,28 @@ function App() {
               <h2 id="tasks-heading">Your tasks</h2>
             </div>
             <div className="section-actions">
+              <div
+                className="view-toggle"
+                role="group"
+                aria-label="Switch view"
+              >
+                <button
+                  type="button"
+                  className={viewMode === 'list' ? 'is-active' : ''}
+                  onClick={() => setViewMode('list')}
+                  aria-pressed={viewMode === 'list'}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  className={viewMode === 'calendar' ? 'is-active' : ''}
+                  onClick={() => setViewMode('calendar')}
+                  aria-pressed={viewMode === 'calendar'}
+                >
+                  Calendar
+                </button>
+              </div>
               <button
                 className="secondary-button"
                 type="button"
@@ -473,17 +620,26 @@ function App() {
           />
 
           {filteredTasks.length > 0 ? (
-            <TaskList
-              tasks={filteredTasks}
-              today={today}
-              selectionMode={selectionMode}
-              selectedIds={selectedIds}
-              onToggle={toggleTask}
-              onToggleSelection={toggleSelection}
-              onEdit={openEditTask}
-              onDelete={deleteTask}
-              onTogglePin={togglePin}
-            />
+            viewMode === 'calendar' ? (
+              <CalendarView
+                tasks={filteredTasks}
+                today={today}
+                onSelectTask={openEditTask}
+              />
+            ) : (
+              <TaskList
+                tasks={filteredTasks}
+                today={today}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onToggle={toggleTask}
+                onToggleSelection={toggleSelection}
+                onEdit={openEditTask}
+                onDelete={deleteTask}
+                onTogglePin={togglePin}
+                onStartFocus={startFocus}
+              />
+            )
           ) : (
             <EmptyState
               hasTasks={tasks.length > 0}
@@ -507,6 +663,24 @@ function App() {
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
       />
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={paletteCommands}
+        tasks={tasks}
+        onSelectTask={openEditTask}
+      />
+
+      {focus.session && (
+        <FocusOverlay
+          session={focus.session}
+          isComplete={focus.isComplete}
+          onToggle={focus.toggle}
+          onStop={focus.stop}
+          onCompleteTask={completeFocusTask}
+        />
+      )}
 
       {selectionMode && (
         <SelectionBar

@@ -5,7 +5,9 @@ import {
   Flag,
   Pencil,
   Pin,
+  Play,
   Repeat,
+  Timer,
   Trash2,
 } from 'lucide-react';
 import { priorityLabels, recurrenceShortLabels } from '../constants';
@@ -23,6 +25,7 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
   onTogglePin: (taskId: string) => void;
+  onStartFocus: (task: Task) => void;
 }
 
 function TaskCardComponent({
@@ -35,6 +38,7 @@ function TaskCardComponent({
   onEdit,
   onDelete,
   onTogglePin,
+  onStartFocus,
 }: TaskCardProps) {
   const overdueTask = isOverdue(task, today);
   const doneSubtasks = task.subtasks.filter((subtask) => subtask.done).length;
@@ -88,6 +92,17 @@ function TaskCardComponent({
             {task.title}
           </h3>
           <div className="task-badges">
+            {task.focusSessions > 0 && (
+              <span
+                className="focus-badge"
+                title={`${task.focusSessions} focus ${
+                  task.focusSessions === 1 ? 'session' : 'sessions'
+                } · ${task.focusMinutes} minutes`}
+              >
+                <Timer size={11} />
+                {task.focusSessions}
+              </span>
+            )}
             {task.recurrence !== 'none' && (
               <span
                 className="recurrence-badge"
@@ -143,6 +158,17 @@ function TaskCardComponent({
 
       {!selectionMode && (
         <div className="task-actions">
+          {!task.completed && (
+            <button
+              className="task-action-button focus-button"
+              type="button"
+              onClick={() => onStartFocus(task)}
+              aria-label={`Start focus session for ${task.title}`}
+              title="Start focus session"
+            >
+              <Play size={15} />
+            </button>
+          )}
           <button
             className={`task-action-button pin-button ${task.pinned ? 'is-pinned' : ''}`}
             type="button"

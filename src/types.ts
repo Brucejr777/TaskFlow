@@ -3,6 +3,7 @@ export type StatusFilter = 'all' | 'active' | 'completed' | 'overdue';
 export type SortOption = 'newest' | 'oldest' | 'dueDate' | 'priority';
 export type Theme = 'light' | 'dark';
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+export type ViewMode = 'list' | 'calendar';
 
 export interface Subtask {
   id: string;
@@ -23,6 +24,8 @@ export interface Task {
   subtasks: Subtask[];
   recurrence: Recurrence;
   pinned: boolean;
+  focusSessions: number;
+  focusMinutes: number;
 }
 
 export interface TaskFormValues {

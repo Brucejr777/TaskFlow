@@ -69,6 +69,8 @@ export const parseTask = (value: unknown): Task | null => {
     subtasks,
     recurrence: isRecurrence(task.recurrence) ? task.recurrence : 'none',
     pinned: typeof task.pinned === 'boolean' ? task.pinned : false,
+    focusSessions: typeof task.focusSessions === 'number' ? task.focusSessions : 0,
+    focusMinutes: typeof task.focusMinutes === 'number' ? task.focusMinutes : 0,
   };
 };
 
