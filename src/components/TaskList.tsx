@@ -10,6 +10,9 @@ interface TaskListProps {
   onToggleSelection: (taskId: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onDuplicate: (taskId: string) => void;
+  onArchive: (taskId: string) => void;
+  onRestore: (taskId: string) => void;
   onTogglePin: (taskId: string) => void;
   onStartFocus: (task: Task) => void;
 }
@@ -23,6 +26,9 @@ export function TaskList({
   onToggleSelection,
   onEdit,
   onDelete,
+  onDuplicate,
+  onArchive,
+  onRestore,
   onTogglePin,
   onStartFocus,
 }: TaskListProps) {
@@ -39,6 +45,9 @@ export function TaskList({
           onToggleSelection={onToggleSelection}
           onEdit={onEdit}
           onDelete={onDelete}
+          onDuplicate={onDuplicate}
+          onArchive={onArchive}
+          onRestore={onRestore}
           onTogglePin={onTogglePin}
           onStartFocus={onStartFocus}
         />

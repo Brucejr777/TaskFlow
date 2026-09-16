@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import {
+  Bell,
+  BellOff,
   CalendarDays,
   Check,
   Command,
@@ -19,6 +21,8 @@ interface HeaderProps {
   onImport: (file: File) => void;
   onShowShortcuts: () => void;
   onOpenPalette: () => void;
+  notificationsEnabled: boolean;
+  onToggleNotifications: () => void;
 }
 
 const headerDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -34,6 +38,8 @@ export function Header({
   onImport,
   onShowShortcuts,
   onOpenPalette,
+  notificationsEnabled,
+  onToggleNotifications,
 }: HeaderProps) {
   const today = useToday();
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -70,6 +76,26 @@ export function Header({
         </button>
 
         <div className="header-icon-group">
+          <button
+            className={`icon-button notification-button ${
+              notificationsEnabled ? 'is-active' : ''
+            }`}
+            type="button"
+            onClick={onToggleNotifications}
+            aria-label={
+              notificationsEnabled
+                ? 'Disable task reminders'
+                : 'Enable task reminders'
+            }
+            aria-pressed={notificationsEnabled}
+            title={
+              notificationsEnabled
+                ? 'Disable task reminders'
+                : 'Enable task reminders for due tasks'
+            }
+          >
+            {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+          </button>
           <button
             className="icon-button"
             type="button"

@@ -1,4 +1,4 @@
-import { Check, Pause, Play, Square, X } from 'lucide-react';
+import { Check, Coffee, Pause, Play, Plus, Square, X } from 'lucide-react';
 import type { FocusSession } from '../hooks/useFocusSession';
 
 interface FocusOverlayProps {
@@ -7,6 +7,8 @@ interface FocusOverlayProps {
   onToggle: () => void;
   onStop: () => void;
   onCompleteTask: () => void;
+  onStartBreak: () => void;
+  onExtend: () => void;
 }
 
 const formatTime = (ms: number): string => {
@@ -25,34 +27,48 @@ export function FocusOverlay({
   onToggle,
   onStop,
   onCompleteTask,
+  onStartBreak,
+  onExtend,
 }: FocusOverlayProps) {
+  const isBreak = session.phase === 'break';
   const progress =
     session.durationMs === 0
       ? 1
       : 1 - session.remainingMs / session.durationMs;
   const offset = CIRCUMFERENCE * (1 - progress);
 
+  const kicker = isBreak
+    ? isComplete
+      ? 'Break complete'
+      : 'Break time'
+    : isComplete
+      ? 'Session complete'
+      : 'Focus session';
+
   return (
     <div className="modal-backdrop focus-backdrop" role="presentation">
       <div
-        className="focus-overlay"
+        className={`focus-overlay ${isBreak ? 'is-break' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Focus session"
+        aria-label={isBreak ? 'Break timer' : 'Focus session'}
       >
         <button
           className="icon-button focus-close"
           type="button"
           onClick={onStop}
-          aria-label="End focus session"
+          aria-label="End session"
         >
           <X size={18} />
         </button>
 
-        <p className="modal-kicker">
-          {isComplete ? 'Session complete' : 'Focus session'}
-        </p>
+        <p className="modal-kicker">{kicker}</p>
         <h2 className="focus-task-title">{session.taskTitle}</h2>
+        {isBreak && !isComplete && (
+          <p className="focus-break-note">
+            Step away, stretch, hydrate — back in a moment.
+          </p>
+        )}
 
         <div className="focus-ring-wrap">
           <svg viewBox="0 0 200 200" className="focus-ring" aria-hidden="true">
@@ -77,10 +93,33 @@ export function FocusOverlay({
         </div>
 
         <div className="focus-actions">
-          {isComplete ? (
+          {isBreak ? (
+            isComplete ? (
+              <button className="primary-button" type="button" onClick={onStop}>
+                <Check size={17} />
+                Finish
+              </button>
+            ) : (
+              <>
+                <button className="secondary-button" type="button" onClick={onStop}>
+                  <Square size={15} />
+                  End break
+                </button>
+                <button className="primary-button" type="button" onClick={onToggle}>
+                  {session.running ? <Pause size={17} /> : <Play size={17} />}
+                  {session.running ? 'Pause' : 'Resume'}
+                </button>
+              </>
+            )
+          ) : isComplete ? (
             <>
-              <button className="secondary-button" type="button" onClick={onStop}>
-                Close
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={onStartBreak}
+              >
+                <Coffee size={16} />
+                Take a 5-min break
               </button>
               <button
                 className="primary-button"
@@ -93,6 +132,10 @@ export function FocusOverlay({
             </>
           ) : (
             <>
+              <button className="ghost-button" type="button" onClick={onExtend}>
+                <Plus size={15} />
+                +5 min
+              </button>
               <button className="secondary-button" type="button" onClick={onStop}>
                 <Square size={15} />
                 End

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { priorityLabels } from '../constants';
 import type { Task } from '../types';
 import { toDateInputValue } from '../utils/date';
@@ -17,17 +17,19 @@ export function CalendarView({ tasks, today, onSelectTask }: CalendarViewProps) 
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
 
-  const tasksByDate = useMemo(() => {
+  const { tasksByDate, unscheduled } = useMemo(() => {
     const map = new Map<string, Task[]>();
+    const noDate: Task[] = [];
     for (const task of tasks) {
       if (!task.dueDate) {
+        noDate.push(task);
         continue;
       }
       const list = map.get(task.dueDate) ?? [];
       list.push(task);
       map.set(task.dueDate, list);
     }
-    return map;
+    return { tasksByDate: map, unscheduled: noDate };
   }, [tasks]);
 
   const cells = useMemo(() => {
@@ -126,6 +128,34 @@ export function CalendarView({ tasks, today, onSelectTask }: CalendarViewProps) 
           );
         })}
       </div>
+
+      {unscheduled.length > 0 && (
+        <section
+          className="calendar-unscheduled"
+          aria-label="Unscheduled tasks"
+        >
+          <header className="calendar-unscheduled-header">
+            <CalendarOff size={15} />
+            <span>Unscheduled</span>
+            <span className="calendar-count">{unscheduled.length}</span>
+          </header>
+          <div className="calendar-unscheduled-list">
+            {unscheduled.map((task) => (
+              <button
+                key={task.id}
+                type="button"
+                className={`calendar-task priority-${task.priority} ${
+                  task.completed ? 'is-completed' : ''
+                }`}
+                onClick={() => onSelectTask(task)}
+                title={`${task.title} · ${priorityLabels[task.priority]}`}
+              >
+                {task.title}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

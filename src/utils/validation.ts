@@ -63,6 +63,7 @@ export const parseTask = (value: unknown): Task | null => {
     priority: isPriority(task.priority) ? task.priority : 'medium',
     dueDate: typeof task.dueDate === 'string' ? task.dueDate : '',
     completed: task.completed,
+    archived: typeof task.archived === 'boolean' ? task.archived : false,
     createdAt: task.createdAt,
     updatedAt: typeof task.updatedAt === 'number' ? task.updatedAt : undefined,
     tags,

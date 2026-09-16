@@ -24,6 +24,7 @@ import { EmptyState } from './components/EmptyState';
 import { FocusOverlay } from './components/FocusOverlay';
 import { Header } from './components/Header';
 import { ProgressFooter } from './components/ProgressFooter';
+import { QuickAdd } from './components/QuickAdd';
 import { SelectionBar } from './components/SelectionBar';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { StatsGrid } from './components/StatsGrid';
@@ -32,12 +33,15 @@ import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
 import { ToastViewport } from './components/Toast';
 import {
+  DEFAULT_BREAK_MINUTES,
   DEFAULT_FOCUS_MINUTES,
+  NOTIFICATIONS_KEY,
   STORAGE_KEY,
   VIEW_MODE_KEY,
 } from './constants';
 import { useFocusSession } from './hooks/useFocusSession';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useNotifications } from './hooks/useNotifications';
 import { useTheme } from './hooks/useTheme';
 import { useToasts } from './hooks/useToasts';
 import { useToday } from './hooks/useToday';
@@ -49,11 +53,12 @@ import type {
   TaskFormValues,
   ViewMode,
 } from './types';
-import { getNextDueDate } from './utils/date';
+import { getNextDueDate, toDateInputValue } from './utils/date';
 import { downloadTasks, extractTasksFromImport } from './utils/export';
 import { filterAndSortTasks } from './utils/filters';
 import { createId } from './utils/id';
 import { getTaskStats } from './utils/stats';
+import { duplicateTask } from './utils/tasks';
 import { parseTasks } from './utils/validation';
 
 const isTypingTarget = (target: EventTarget | null): boolean => {
@@ -82,6 +87,7 @@ const applyCompletion = (tasks: Task[], ids: Set<string>): Task[] => {
         ...task,
         id: createId(),
         completed: false,
+        archived: false,
         createdAt: Date.now(),
         updatedAt: undefined,
         dueDate: getNextDueDate(task.dueDate, task.recurrence),
@@ -104,9 +110,15 @@ function App() {
     VIEW_MODE_KEY,
     'list',
   );
+  const [notificationsEnabled, setNotificationsEnabled] = useLocalStorage<boolean>(
+    NOTIFICATIONS_KEY,
+    false,
+  );
   const today = useToday();
   const { toasts, push, dismiss } = useToasts();
   const focus = useFocusSession();
+
+  useNotifications(tasks, notificationsEnabled, today);
 
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
@@ -246,6 +258,116 @@ function App() {
     [push, setTasks],
   );
 
+  const toggleNotifications = useCallback(() => {
+    const next = !notificationsEnabled;
+    setNotificationsEnabled(next);
+
+    if (!next) {
+      push('Reminders disabled', { kind: 'info' });
+      return;
+    }
+
+    if (typeof Notification === 'undefined') {
+      push('Your browser does not support notifications', { kind: 'warning' });
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      push('Notifications are blocked in your browser settings', {
+        kind: 'warning',
+      });
+      return;
+    }
+
+    if (Notification.permission === 'default') {
+      void Notification.requestPermission();
+    }
+
+    push('Reminders enabled — you will be notified on due dates', {
+      kind: 'success',
+    });
+  }, [notificationsEnabled, push, setNotificationsEnabled]);
+
+  const handleQuickAdd = useCallback(
+    (title: string) => {
+      const newTask: Task = {
+        id: createId(),
+        title,
+        description: '',
+        priority: 'medium',
+        dueDate: '',
+        completed: false,
+        archived: false,
+        createdAt: Date.now(),
+        tags: [],
+        subtasks: [],
+        recurrence: 'none',
+        pinned: false,
+        focusSessions: 0,
+        focusMinutes: 0,
+      };
+      setTasks((current) => [newTask, ...current]);
+      push('Task added', { kind: 'success' });
+    },
+    [push, setTasks],
+  );
+
+  const handleDuplicate = useCallback(
+    (taskId: string) => {
+      const target = tasks.find((task) => task.id === taskId);
+      if (!target) {
+        return;
+      }
+      const copy = duplicateTask(target);
+      setTasks((current) => [copy, ...current]);
+      push('Task duplicated', { kind: 'success' });
+    },
+    [push, setTasks, tasks],
+  );
+
+  const handleArchive = useCallback(
+    (taskId: string) => {
+      const target = tasks.find((task) => task.id === taskId);
+      if (!target) {
+        return;
+      }
+
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === taskId
+            ? { ...task, archived: true, pinned: false, updatedAt: Date.now() }
+            : task,
+        ),
+      );
+
+      push('Task archived', {
+        kind: 'info',
+        actionLabel: 'Undo',
+        onAction: () =>
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === taskId ? { ...task, archived: false } : task,
+            ),
+          ),
+      });
+    },
+    [push, setTasks, tasks],
+  );
+
+  const handleRestore = useCallback(
+    (taskId: string) => {
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === taskId
+            ? { ...task, archived: false, updatedAt: Date.now() }
+            : task,
+        ),
+      );
+      push('Task restored', { kind: 'success' });
+    },
+    [push, setTasks],
+  );
+
   const startFocus = useCallback(
     (task: Task) => {
       focus.start(task.id, task.title, DEFAULT_FOCUS_MINUTES);
@@ -254,11 +376,12 @@ function App() {
   );
 
   const completeFocusTask = useCallback(() => {
-    if (!focus.session) {
+    const session = focus.session;
+    if (!session) {
       return;
     }
-    const { taskId, durationMs, taskTitle } = focus.session;
-    const minutes = Math.max(1, Math.round(durationMs / 60000));
+    const { taskId, taskTitle, workDurationMs } = session;
+    const minutes = Math.max(1, Math.round(workDurationMs / 60000));
 
     setTasks((current) => {
       const withFocus = current.map((task) =>
@@ -284,7 +407,6 @@ function App() {
         return;
       }
 
-      // Command palette (works regardless of other state).
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setPaletteOpen(true);
@@ -353,6 +475,7 @@ function App() {
           id: createId(),
           ...values,
           completed: false,
+          archived: false,
           createdAt: Date.now(),
           focusSessions: 0,
           focusMinutes: 0,
@@ -370,7 +493,7 @@ function App() {
     (taskId: string) => {
       setTasks((currentTasks) => {
         const target = currentTasks.find((task) => task.id === taskId);
-        if (!target) {
+        if (!target || target.archived) {
           return currentTasks;
         }
 
@@ -419,6 +542,31 @@ function App() {
     exitSelectionMode();
   }, [exitSelectionMode, push, selectedIds, setTasks]);
 
+  const bulkArchive = useCallback(() => {
+    if (selectedIds.size === 0) {
+      return;
+    }
+    const count = selectedIds.size;
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        selectedIds.has(task.id)
+          ? { ...task, archived: true, pinned: false, updatedAt: Date.now() }
+          : task,
+      ),
+    );
+    push(`Archived ${count} ${count === 1 ? 'task' : 'tasks'}`, {
+      kind: 'info',
+      actionLabel: 'Undo',
+      onAction: () =>
+        setTasks((currentTasks) =>
+          currentTasks.map((task) =>
+            selectedIds.has(task.id) ? { ...task, archived: false } : task,
+          ),
+        ),
+    });
+    exitSelectionMode();
+  }, [exitSelectionMode, push, selectedIds, setTasks]);
+
   const bulkDelete = useCallback(() => {
     if (selectedIds.size === 0) {
       return;
@@ -441,12 +589,14 @@ function App() {
   }, [exitSelectionMode, push, selectedIds, setTasks, tasks]);
 
   const clearCompleted = useCallback(() => {
-    const removed = tasks.filter((task) => task.completed);
+    const removed = tasks.filter((task) => task.completed && !task.archived);
     if (removed.length === 0) {
       return;
     }
 
-    setTasks((currentTasks) => currentTasks.filter((task) => !task.completed));
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => !(task.completed && !task.archived)),
+    );
 
     push(
       `Cleared ${removed.length} completed ${
@@ -492,6 +642,13 @@ function App() {
         perform: () => setViewMode(viewMode === 'list' ? 'calendar' : 'list'),
       },
       {
+        id: 'show-archived',
+        label: 'Show archived tasks',
+        keywords: 'archive history restore',
+        icon: Trash2,
+        perform: () => setStatusFilter('archived'),
+      },
+      {
         id: 'export',
         label: 'Export tasks as JSON',
         icon: Download,
@@ -528,6 +685,8 @@ function App() {
         onImport={handleImport}
         onShowShortcuts={() => setShortcutsOpen(true)}
         onOpenPalette={() => setPaletteOpen(true)}
+        notificationsEnabled={notificationsEnabled}
+        onToggleNotifications={toggleNotifications}
       />
 
       <main className="page-container">
@@ -589,7 +748,11 @@ function App() {
                 className="secondary-button"
                 type="button"
                 onClick={enterSelectionMode}
-                disabled={filteredTasks.length === 0 || selectionMode}
+                disabled={
+                  filteredTasks.length === 0 ||
+                  selectionMode ||
+                  statusFilter === 'archived'
+                }
               >
                 <ListChecks size={17} />
                 Select
@@ -604,6 +767,8 @@ function App() {
               </button>
             </div>
           </div>
+
+          {statusFilter !== 'archived' && <QuickAdd onAdd={handleQuickAdd} />}
 
           <TaskControls
             search={search}
@@ -620,7 +785,7 @@ function App() {
           />
 
           {filteredTasks.length > 0 ? (
-            viewMode === 'calendar' ? (
+            viewMode === 'calendar' && statusFilter !== 'archived' ? (
               <CalendarView
                 tasks={filteredTasks}
                 today={today}
@@ -636,6 +801,9 @@ function App() {
                 onToggleSelection={toggleSelection}
                 onEdit={openEditTask}
                 onDelete={deleteTask}
+                onDuplicate={handleDuplicate}
+                onArchive={handleArchive}
+                onRestore={handleRestore}
                 onTogglePin={togglePin}
                 onStartFocus={startFocus}
               />
@@ -679,6 +847,8 @@ function App() {
           onToggle={focus.toggle}
           onStop={focus.stop}
           onCompleteTask={completeFocusTask}
+          onStartBreak={() => focus.startBreak(DEFAULT_BREAK_MINUTES)}
+          onExtend={() => focus.extend(5)}
         />
       )}
 
@@ -689,6 +859,7 @@ function App() {
           onSelectAll={selectAllVisible}
           onClearSelection={clearSelection}
           onComplete={bulkComplete}
+          onArchive={bulkArchive}
           onDelete={bulkDelete}
           onCancel={exitSelectionMode}
         />

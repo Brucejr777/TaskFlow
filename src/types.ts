@@ -1,9 +1,10 @@
 export type Priority = 'low' | 'medium' | 'high';
-export type StatusFilter = 'all' | 'active' | 'completed' | 'overdue';
+export type StatusFilter = 'all' | 'active' | 'completed' | 'overdue' | 'archived';
 export type SortOption = 'newest' | 'oldest' | 'dueDate' | 'priority';
 export type Theme = 'light' | 'dark';
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
 export type ViewMode = 'list' | 'calendar';
+export type FocusPhase = 'work' | 'break';
 
 export interface Subtask {
   id: string;
@@ -18,6 +19,7 @@ export interface Task {
   priority: Priority;
   dueDate: string;
   completed: boolean;
+  archived: boolean;
   createdAt: number;
   updatedAt?: number;
   tags: string[];

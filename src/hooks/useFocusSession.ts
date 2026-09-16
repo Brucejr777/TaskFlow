@@ -1,19 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
 
+export type FocusPhase = 'work' | 'break';
+
 export interface FocusSession {
   taskId: string;
   taskTitle: string;
+  phase: FocusPhase;
   durationMs: number;
   remainingMs: number;
   running: boolean;
+  /** The original work-phase duration, preserved so we can log accurate minutes. */
+  workDurationMs: number;
 }
 
 export interface FocusSessionApi {
   session: FocusSession | null;
   isComplete: boolean;
   start: (taskId: string, taskTitle: string, minutes: number) => void;
+  startBreak: (minutes: number) => void;
   toggle: () => void;
   stop: () => void;
+  extend: (minutes: number) => void;
 }
 
 export function useFocusSession(): FocusSessionApi {
@@ -49,13 +56,33 @@ export function useFocusSession(): FocusSessionApi {
       setSession({
         taskId,
         taskTitle,
+        phase: 'work',
         durationMs,
         remainingMs: durationMs,
         running: true,
+        workDurationMs: durationMs,
       });
     },
     [],
   );
+
+  const startBreak = useCallback((minutes: number) => {
+    setSession((current) => {
+      if (!current) {
+        return current;
+      }
+      const durationMs = Math.max(1, minutes) * 60 * 1000;
+      return {
+        taskId: current.taskId,
+        taskTitle: current.taskTitle,
+        phase: 'break',
+        durationMs,
+        remainingMs: durationMs,
+        running: true,
+        workDurationMs: current.workDurationMs,
+      };
+    });
+  }, []);
 
   const toggle = useCallback(() => {
     setSession((current) =>
@@ -65,7 +92,22 @@ export function useFocusSession(): FocusSessionApi {
 
   const stop = useCallback(() => setSession(null), []);
 
+  const extend = useCallback((minutes: number) => {
+    setSession((current) => {
+      if (!current) {
+        return current;
+      }
+      const addMs = Math.max(1, minutes) * 60 * 1000;
+      return {
+        ...current,
+        durationMs: current.durationMs + addMs,
+        remainingMs: current.remainingMs + addMs,
+        running: true,
+      };
+    });
+  }, []);
+
   const isComplete = Boolean(session && session.remainingMs === 0);
 
-  return { session, isComplete, start, toggle, stop };
+  return { session, isComplete, start, startBreak, toggle, stop, extend };
 }

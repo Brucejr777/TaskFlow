@@ -1,0 +1,258 @@
+/* =========================================================
+   TaskFlow — Feature add-ons
+   Loaded after styles.css so it can safely extend the base
+   design tokens and components.
+   ========================================================= */
+
+/* ---------- Inline quick-add ---------- */
+
+.quick-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  margin-bottom: 16px;
+  padding: 0 12px 0 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  transition: border-color 160ms var(--ease), background-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.quick-add.is-expanded {
+  border-style: solid;
+  border-color: var(--primary);
+  background: var(--surface-1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.quick-add-icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.quick-add input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.quick-add input::placeholder {
+  color: var(--text-faint);
+}
+
+.quick-add-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.005em;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease),
+    transform 160ms var(--ease);
+}
+
+.quick-add-submit:hover {
+  background: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.quick-add-submit:active {
+  transform: translateY(0);
+}
+
+/* ---------- Header notification toggle ---------- */
+
+.notification-button.is-active {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.header-icon-group .notification-button.is-active:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* ---------- Archived tasks ---------- */
+
+.task-card.is-archived {
+  opacity: 0.82;
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface-1));
+}
+
+.task-card.is-archived::before {
+  --rail: var(--text-faint);
+  opacity: 0.6;
+}
+
+.task-card.is-archived:hover {
+  transform: none;
+  border-color: var(--border-strong);
+}
+
+.archive-leading {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--surface-3);
+  color: var(--text-faint);
+}
+
+.restore-button:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+/* On the six-action cards, tighten the gap and hover lift just slightly. */
+.task-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ---------- Focus overlay break state ---------- */
+
+.focus-overlay.is-break .focus-ring-fill {
+  stroke: var(--accent-teal);
+}
+
+.focus-overlay.is-break .focus-time {
+  color: var(--accent-teal);
+}
+
+.focus-overlay.is-break .modal-kicker {
+  color: var(--accent-teal);
+}
+
+.focus-break-note {
+  margin: 10px 0 0;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.focus-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.focus-actions .ghost-button {
+  min-height: 42px;
+  padding-inline: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-soft);
+}
+
+.focus-actions .ghost-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text);
+}
+
+/* ---------- Selection bar (with new Archive action) ---------- */
+
+.selection-actions .secondary-button:nth-of-type(2) {
+  /* The Archive button should still read as a safe, secondary action. */
+  color: var(--text);
+}
+
+/* ---------- Calendar: unscheduled tasks ---------- */
+
+.calendar-unscheduled {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-2) 60%, var(--surface-1));
+}
+
+.calendar-unscheduled-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.calendar-unscheduled-header svg {
+  color: var(--text-faint);
+}
+
+.calendar-unscheduled-header .calendar-count {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.calendar-unscheduled-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.calendar-unscheduled-list .calendar-task {
+  width: auto;
+  max-width: 220px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 620px) {
+  .quick-add {
+    padding-inline: 10px 8px;
+  }
+
+  .quick-add-submit {
+    padding-inline: 9px;
+    font-size: 11.5px;
+  }
+
+  .selection-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .selection-actions .icon-button {
+    grid-column: span 2;
+    justify-self: end;
+  }
+}

@@ -1,4 +1,4 @@
-import { Check, Trash2, X, ListChecks } from 'lucide-react';
+import { Archive, Check, Trash2, X, ListChecks } from 'lucide-react';
 
 interface SelectionBarProps {
   count: number;
@@ -6,6 +6,7 @@ interface SelectionBarProps {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onComplete: () => void;
+  onArchive: () => void;
   onDelete: () => void;
   onCancel: () => void;
 }
@@ -16,6 +17,7 @@ export function SelectionBar({
   onSelectAll,
   onClearSelection,
   onComplete,
+  onArchive,
   onDelete,
   onCancel,
 }: SelectionBarProps) {
@@ -45,6 +47,15 @@ export function SelectionBar({
         >
           <Check size={16} />
           Complete
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onArchive}
+          disabled={count === 0}
+        >
+          <Archive size={16} />
+          Archive
         </button>
         <button
           type="button"
