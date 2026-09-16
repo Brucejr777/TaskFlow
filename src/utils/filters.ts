@@ -6,6 +6,7 @@ export interface FilterAndSortOptions {
   search: string;
   statusFilter: StatusFilter;
   priorityFilter: Priority | 'all';
+  tagFilter: string;
   sortOption: SortOption;
   today: Date;
 }
@@ -20,7 +21,8 @@ export const filterAndSortTasks = (
     const matchesSearch =
       !query ||
       task.title.toLowerCase().includes(query) ||
-      task.description.toLowerCase().includes(query);
+      task.description.toLowerCase().includes(query) ||
+      task.tags.some((tag) => tag.toLowerCase().includes(query));
 
     const matchesStatus =
       options.statusFilter === 'all' ||
@@ -31,10 +33,18 @@ export const filterAndSortTasks = (
     const matchesPriority =
       options.priorityFilter === 'all' || task.priority === options.priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    const matchesTag =
+      !options.tagFilter || task.tags.includes(options.tagFilter);
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesTag;
   });
 
   return [...visibleTasks].sort((first, second) => {
+    const pinnedDifference = (second.pinned ? 1 : 0) - (first.pinned ? 1 : 0);
+    if (pinnedDifference !== 0) {
+      return pinnedDifference;
+    }
+
     if (options.sortOption === 'newest') {
       return second.createdAt - first.createdAt;
     }

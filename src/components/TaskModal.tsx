@@ -4,16 +4,25 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
-import { Flag, Pencil, Plus, X } from 'lucide-react';
+import { Flag, Pencil, Pin, Plus, Repeat, Trash2, X } from 'lucide-react';
 import {
   TASK_DESCRIPTION_MAX_LENGTH,
+  TASK_SUBTASK_MAX_COUNT,
+  TASK_SUBTASK_MAX_LENGTH,
+  TASK_TAG_MAX_COUNT,
+  TASK_TAG_MAX_LENGTH,
   TASK_TITLE_MAX_LENGTH,
   priorityLabels,
   priorityOptions,
+  recurrenceLabels,
+  recurrenceOptions,
 } from '../constants';
-import type { Task, TaskFormValues } from '../types';
+import type { Subtask, Task, TaskFormValues } from '../types';
 import { toDateInputValue } from '../utils/date';
+import { createId } from '../utils/id';
+import { getTagTone, normalizeTag } from '../utils/tags';
 
 interface TaskModalProps {
   open: boolean;
@@ -27,11 +36,17 @@ const createEmptyForm = (): TaskFormValues => ({
   description: '',
   priority: 'medium',
   dueDate: '',
+  tags: [],
+  subtasks: [],
+  recurrence: 'none',
+  pinned: false,
 });
 
 export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
   const [formValues, setFormValues] = useState<TaskFormValues>(createEmptyForm);
   const [formError, setFormError] = useState('');
+  const [tagDraft, setTagDraft] = useState('');
+  const [subtaskDraft, setSubtaskDraft] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const todayInput = useMemo(() => toDateInputValue(new Date()), []);
@@ -48,10 +63,16 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
             description: task.description,
             priority: task.priority,
             dueDate: task.dueDate,
+            tags: [...task.tags],
+            subtasks: task.subtasks.map((subtask) => ({ ...subtask })),
+            recurrence: task.recurrence,
+            pinned: task.pinned,
           }
         : createEmptyForm(),
     );
     setFormError('');
+    setTagDraft('');
+    setSubtaskDraft('');
   }, [open, task]);
 
   useEffect(() => {
@@ -128,7 +149,105 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
       return;
     }
 
-    onSave({ ...formValues, title, description }, task?.id);
+    onSave(
+      {
+        ...formValues,
+        title,
+        description,
+        tags: formValues.tags.map(normalizeTag).filter(Boolean),
+        subtasks: formValues.subtasks
+          .map((subtask) => ({
+            ...subtask,
+            title: subtask.title.trim(),
+          }))
+          .filter((subtask) => subtask.title.length > 0),
+      },
+      task?.id,
+    );
+  };
+
+  const addTag = () => {
+    const nextTag = normalizeTag(tagDraft).slice(0, TASK_TAG_MAX_LENGTH);
+    if (!nextTag) {
+      return;
+    }
+    if (formValues.tags.length >= TASK_TAG_MAX_COUNT) {
+      return;
+    }
+    if (
+      formValues.tags.some(
+        (existing) => existing.toLowerCase() === nextTag.toLowerCase(),
+      )
+    ) {
+      setTagDraft('');
+      return;
+    }
+    setFormValues({ ...formValues, tags: [...formValues.tags, nextTag] });
+    setTagDraft('');
+  };
+
+  const removeTag = (tag: string) => {
+    setFormValues({
+      ...formValues,
+      tags: formValues.tags.filter((existing) => existing !== tag),
+    });
+  };
+
+  const handleTagKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addTag();
+    } else if (event.key === 'Backspace' && !tagDraft && formValues.tags.length > 0) {
+      removeTag(formValues.tags[formValues.tags.length - 1]!);
+    }
+  };
+
+  const addSubtask = () => {
+    const title = subtaskDraft.trim().slice(0, TASK_SUBTASK_MAX_LENGTH);
+    if (!title) {
+      return;
+    }
+    if (formValues.subtasks.length >= TASK_SUBTASK_MAX_COUNT) {
+      return;
+    }
+    const nextSubtask: Subtask = { id: createId(), title, done: false };
+    setFormValues({
+      ...formValues,
+      subtasks: [...formValues.subtasks, nextSubtask],
+    });
+    setSubtaskDraft('');
+  };
+
+  const handleSubtaskKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addSubtask();
+    }
+  };
+
+  const toggleSubtask = (subtaskId: string) => {
+    setFormValues({
+      ...formValues,
+      subtasks: formValues.subtasks.map((subtask) =>
+        subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask,
+      ),
+    });
+  };
+
+  const updateSubtaskTitle = (subtaskId: string, title: string) => {
+    setFormValues({
+      ...formValues,
+      subtasks: formValues.subtasks.map((subtask) =>
+        subtask.id === subtaskId ? { ...subtask, title } : subtask,
+      ),
+    });
+  };
+
+  const removeSubtask = (subtaskId: string) => {
+    setFormValues({
+      ...formValues,
+      subtasks: formValues.subtasks.filter((subtask) => subtask.id !== subtaskId),
+    });
   };
 
   return (
@@ -178,6 +297,7 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               maxLength={TASK_TITLE_MAX_LENGTH}
             />
           </label>
+
           <label className="form-field">
             <span>Description</span>
             <textarea
@@ -190,6 +310,121 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               maxLength={TASK_DESCRIPTION_MAX_LENGTH}
             />
           </label>
+
+          <div className="form-field">
+            <span>Tags</span>
+            {formValues.tags.length > 0 && (
+              <div className="tag-editor-list">
+                {formValues.tags.map((tag) => (
+                  <span className={`tag-chip tag-tone-${getTagTone(tag)}`} key={tag}>
+                    {tag}
+                    <button
+                      type="button"
+                      className="tag-remove"
+                      onClick={() => removeTag(tag)}
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="inline-input-row">
+              <input
+                type="text"
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder={
+                  formValues.tags.length >= TASK_TAG_MAX_COUNT
+                    ? `Tag limit reached (${TASK_TAG_MAX_COUNT})`
+                    : 'Add a tag and press Enter'
+                }
+                maxLength={TASK_TAG_MAX_LENGTH}
+                disabled={formValues.tags.length >= TASK_TAG_MAX_COUNT}
+              />
+              <button
+                type="button"
+                className="secondary-button compact-button"
+                onClick={addTag}
+                disabled={
+                  !tagDraft.trim() ||
+                  formValues.tags.length >= TASK_TAG_MAX_COUNT
+                }
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div className="form-field">
+            <span>Subtasks</span>
+            {formValues.subtasks.length > 0 && (
+              <ul className="subtask-editor">
+                {formValues.subtasks.map((subtask) => (
+                  <li key={subtask.id} className="subtask-editor-row">
+                    <button
+                      type="button"
+                      className={`subtask-check ${subtask.done ? 'is-done' : ''}`}
+                      onClick={() => toggleSubtask(subtask.id)}
+                      aria-pressed={subtask.done}
+                      aria-label={
+                        subtask.done
+                          ? `Mark ${subtask.title} as not done`
+                          : `Mark ${subtask.title} as done`
+                      }
+                    >
+                      {subtask.done ? '✓' : ''}
+                    </button>
+                    <input
+                      type="text"
+                      value={subtask.title}
+                      onChange={(event) =>
+                        updateSubtaskTitle(subtask.id, event.target.value)
+                      }
+                      maxLength={TASK_SUBTASK_MAX_LENGTH}
+                    />
+                    <button
+                      type="button"
+                      className="task-action-button delete-button"
+                      onClick={() => removeSubtask(subtask.id)}
+                      aria-label={`Remove subtask ${subtask.title}`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="inline-input-row">
+              <input
+                type="text"
+                value={subtaskDraft}
+                onChange={(event) => setSubtaskDraft(event.target.value)}
+                onKeyDown={handleSubtaskKeyDown}
+                placeholder={
+                  formValues.subtasks.length >= TASK_SUBTASK_MAX_COUNT
+                    ? `Subtask limit reached (${TASK_SUBTASK_MAX_COUNT})`
+                    : 'Add a subtask and press Enter'
+                }
+                maxLength={TASK_SUBTASK_MAX_LENGTH}
+                disabled={formValues.subtasks.length >= TASK_SUBTASK_MAX_COUNT}
+              />
+              <button
+                type="button"
+                className="secondary-button compact-button"
+                onClick={addSubtask}
+                disabled={
+                  !subtaskDraft.trim() ||
+                  formValues.subtasks.length >= TASK_SUBTASK_MAX_COUNT
+                }
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
           <div className="form-row">
             <label className="form-field">
               <span>Priority</span>
@@ -221,6 +456,46 @@ export function TaskModal({ open, task, onClose, onSave }: TaskModalProps) {
               />
             </label>
           </div>
+
+          <div className="form-row">
+            <label className="form-field">
+              <span>Repeat</span>
+              <div className="select-with-icon">
+                <Repeat size={15} aria-hidden="true" />
+                <select
+                  value={formValues.recurrence}
+                  onChange={(event) =>
+                    setFormValues({
+                      ...formValues,
+                      recurrence: event.target
+                        .value as TaskFormValues['recurrence'],
+                    })
+                  }
+                >
+                  {recurrenceOptions.map((option) => (
+                    <option value={option} key={option}>
+                      {recurrenceLabels[option]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
+            <div className="form-field">
+              <span>Pin</span>
+              <button
+                type="button"
+                className={`pin-toggle ${formValues.pinned ? 'is-pinned' : ''}`}
+                onClick={() =>
+                  setFormValues({ ...formValues, pinned: !formValues.pinned })
+                }
+                aria-pressed={formValues.pinned}
+              >
+                <Pin size={15} />
+                {formValues.pinned ? 'Pinned to top' : 'Not pinned'}
+              </button>
+            </div>
+          </div>
+
           {formError && (
             <p className="form-error" role="alert">
               {formError}

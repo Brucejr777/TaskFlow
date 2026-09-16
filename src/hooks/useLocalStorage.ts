@@ -8,7 +8,7 @@ import {
 export function useLocalStorage<T>(
   key: string,
   initialValue: T | (() => T),
-  validate?: (value: unknown) => value is T,
+  parse?: (value: unknown) => T | null,
 ): [T, Dispatch<SetStateAction<T>>] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     const fallback = () =>
@@ -23,8 +23,9 @@ export function useLocalStorage<T>(
       }
 
       const parsed = JSON.parse(item) as unknown;
-      if (validate && !validate(parsed)) {
-        return fallback();
+      if (parse) {
+        const result = parse(parsed);
+        return result === null ? fallback() : result;
       }
 
       return parsed as T;
@@ -58,7 +59,12 @@ export function useLocalStorage<T>(
 
       try {
         const parsed = JSON.parse(event.newValue) as unknown;
-        if (validate && !validate(parsed)) {
+        if (parse) {
+          const result = parse(parsed);
+          if (result === null) {
+            return;
+          }
+          setStoredValue(result);
           return;
         }
         setStoredValue(parsed as T);
@@ -69,7 +75,7 @@ export function useLocalStorage<T>(
 
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [key, validate]);
+  }, [key, parse]);
 
   return [storedValue, setStoredValue];
 }

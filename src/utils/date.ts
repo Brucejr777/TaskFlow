@@ -1,4 +1,4 @@
-import type { Task } from '../types';
+import type { Recurrence, Task } from '../types';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   month: 'short',
@@ -79,4 +79,26 @@ export const getRelativeDateLabel = (value: string, today: Date): string => {
   }
 
   return formatDate(value);
+};
+
+export const getNextDueDate = (
+  currentDueDate: string,
+  recurrence: Recurrence,
+): string => {
+  if (recurrence === 'none') {
+    return currentDueDate;
+  }
+
+  const base = parseDueDate(currentDueDate) ?? getToday();
+  const next = new Date(base);
+
+  if (recurrence === 'daily') {
+    next.setDate(next.getDate() + 1);
+  } else if (recurrence === 'weekly') {
+    next.setDate(next.getDate() + 7);
+  } else if (recurrence === 'monthly') {
+    next.setMonth(next.getMonth() + 1);
+  }
+
+  return toDateInputValue(next);
 };

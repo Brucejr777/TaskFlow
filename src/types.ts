@@ -2,6 +2,13 @@ export type Priority = 'low' | 'medium' | 'high';
 export type StatusFilter = 'all' | 'active' | 'completed' | 'overdue';
 export type SortOption = 'newest' | 'oldest' | 'dueDate' | 'priority';
 export type Theme = 'light' | 'dark';
+export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+
+export interface Subtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
 
 export interface Task {
   id: string;
@@ -12,6 +19,10 @@ export interface Task {
   completed: boolean;
   createdAt: number;
   updatedAt?: number;
+  tags: string[];
+  subtasks: Subtask[];
+  recurrence: Recurrence;
+  pinned: boolean;
 }
 
 export interface TaskFormValues {
@@ -19,6 +30,10 @@ export interface TaskFormValues {
   description: string;
   priority: Priority;
   dueDate: string;
+  tags: string[];
+  subtasks: Subtask[];
+  recurrence: Recurrence;
+  pinned: boolean;
 }
 
 export interface TaskStats {

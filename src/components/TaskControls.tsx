@@ -1,4 +1,4 @@
-import { ArrowUpDown, Filter, Flag, Search, X } from 'lucide-react';
+import { ArrowUpDown, Filter, Flag, Search, Tag, X } from 'lucide-react';
 import { priorityLabels, sortOptions, statusOptions } from '../constants';
 import type { Priority, SortOption, StatusFilter } from '../types';
 
@@ -9,6 +9,9 @@ interface TaskControlsProps {
   onStatusFilterChange: (value: StatusFilter) => void;
   priorityFilter: Priority | 'all';
   onPriorityFilterChange: (value: Priority | 'all') => void;
+  tagFilter: string;
+  onTagFilterChange: (value: string) => void;
+  allTags: string[];
   sortOption: SortOption;
   onSortOptionChange: (value: SortOption) => void;
 }
@@ -20,6 +23,9 @@ export function TaskControls({
   onStatusFilterChange,
   priorityFilter,
   onPriorityFilterChange,
+  tagFilter,
+  onTagFilterChange,
+  allTags,
   sortOption,
   onSortOptionChange,
 }: TaskControlsProps) {
@@ -32,7 +38,7 @@ export function TaskControls({
           type="search"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search tasks..."
+          placeholder="Search tasks, tags..."
         />
         {search && (
           <button
@@ -79,6 +85,23 @@ export function TaskControls({
             ))}
           </select>
         </div>
+        {allTags.length > 0 && (
+          <div className="filter-select-wrap">
+            <Tag size={15} aria-hidden="true" />
+            <select
+              value={tagFilter}
+              onChange={(event) => onTagFilterChange(event.target.value)}
+              aria-label="Filter by tag"
+            >
+              <option value="">All tags</option>
+              {allTags.map((tag) => (
+                <option value={tag} key={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="filter-select-wrap sort-select-wrap">
           <ArrowUpDown size={15} aria-hidden="true" />
           <select
