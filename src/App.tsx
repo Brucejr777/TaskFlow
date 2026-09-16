@@ -53,7 +53,7 @@ import type {
   TaskFormValues,
   ViewMode,
 } from './types';
-import { getNextDueDate, toDateInputValue } from './utils/date';
+import { getNextDueDate } from './utils/date';
 import { downloadTasks, extractTasksFromImport } from './utils/export';
 import { filterAndSortTasks } from './utils/filters';
 import { createId } from './utils/id';
